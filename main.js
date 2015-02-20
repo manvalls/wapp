@@ -3,8 +3,6 @@ var Emitter = require('y-emitter'),
     Su = require('u-su'),
     wrap = require('y-walk').wrap,
     Cb = require('y-callback/node'),
-    browserify = require('browserify'),
-    regenerator = require('regenerator'),
     
     apply = require('u-proto/apply'),
     until = require('u-proto/until'),
@@ -94,7 +92,10 @@ module.exports = Wapp = wrap(function*(location,server,path){
 Wapp.Target = Target;
 
 Wapp.build = wrap(function*(location){
-  var conf = yield getConf(location),
+  var browserify = require('browserify'),
+      regenerator = require('regenerator'),
+      
+      conf = yield getConf(location),
       folders = conf.folders,
       scripts = conf.scripts,
       
