@@ -1,0 +1,26 @@
+{
+  "name": "wapp",
+  "version": "0.0.0",
+  "description": "SPA framework",
+  "main": "main.js",
+  "dependencies": {
+    "y-emitter": "",
+    "u-su": "",
+    "y-walk": "",
+    "y-callback": "",
+    "u-proto": "",
+    "y-resolver": "",
+    "browserify": "",
+    "regenerator": ""
+  },
+  
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/manvalls/wapp.git"
+  },
+  "bugs": {
+    "url": "https://github.com/manvalls/wapp/issues"
+  },
+  "author": "Manuel Valls Fernández <manolo@vlrz.es>",
+  "license": "LGPL-3.0"
+}
