@@ -1,6 +1,6 @@
 {
   "name": "wapp",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "description": "SPA framework",
   "main": "main.js",
   "dependencies": {
@@ -13,7 +13,6 @@
     "browserify": "",
     "regenerator": ""
   },
-  
   "repository": {
     "type": "git",
     "url": "git://github.com/manvalls/wapp.git"
