@@ -1,6 +1,6 @@
 {
   "name": "wapp",
-  "version": "0.2.0",
+  "version": "1.0.0",
   "description": "SPA framework",
   "main": "main.js",
   "dependencies": {
