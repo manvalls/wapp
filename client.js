@@ -23,7 +23,10 @@ emitter = new Emitter();
 wapp = module.exports = emitter.target;
 
 function listener(){
-  if(this.readyState == 4) this.yd.accept();
+  if(this.readyState == 4){
+    if(this.status == 0) this.yd.reject(new Error('A network error happened'));
+    else this.yd.accept();
+  }
 }
 
 wapp.goTo = wrap(function*(rsc,replace){
@@ -43,7 +46,11 @@ wapp.goTo = wrap(function*(rsc,replace){
   k = (k + 1)%1e15;
   pk = k;
   
-  yield xhr.yd;
+  try{ yield xhr.yd; }
+  catch(e){
+    location.href = prefix + rsc;
+    throw e;
+  }
   
   if(k != pk) return;
   
