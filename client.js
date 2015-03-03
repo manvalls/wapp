@@ -10,6 +10,7 @@ var Emitter = require('y-emitter'),
     code = wapp_code,
     data = wapp_data,
     prefix = wapp_prefix,
+    gzip = wapp_gzip,
     title = document.title,
     
     k = 0,
@@ -82,13 +83,15 @@ wapp.walk(function*(){
     title: title,
     summary: summary,
     data: data,
-    code: code
+    code: code,
+    gzip: gzip
   };
   
   title = null;
   summary = null;
   data = null;
   code = null;
+  gzip = null;
   
   if(global.history) history.replaceState(obj,obj.title,location.href);
   

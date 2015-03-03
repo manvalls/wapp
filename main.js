@@ -153,7 +153,7 @@ Wapp.build = wrap(function*(location){
 // Web Server
 
 function* walker(emitter,folders,path,mime){
-  var req,res,e,i,m,cb,ext,ef,u,
+  var req,res,e,i,m,cb,ext,ef,u,data,gzip,
       pathname,file,stats,date,code,
       query,headers,request,answer;
   
@@ -225,7 +225,6 @@ function* walker(emitter,folders,path,mime){
     }
     
     headers['Last-Modified'] = stats.mtime.toUTCString();
-    headers['Content-Length'] = stats.size;
     
     if(req.method == 'HEAD'){
       res.writeHead(200,headers);
@@ -257,52 +256,72 @@ function* walker(emitter,folders,path,mime){
     if(!answer.summary) answer.summary = http.STATUS_CODES[answer.code];
   }else answer.code = 200;
   
+  headers = {};
+  
   if(query.format == 'json'){
+    
     if(answer.code){
       code = answer.code;
       delete answer.code;
     }else code = 200;
     
-    try{ answer = new Buffer(JSON.stringify(answer)); }
+    try{ data = new Buffer(JSON.stringify(answer)); }
     catch(e){
-      answer = new Buffer('{"title":"500","summary":"Couldn\'t stringify JSON data"}');
+      data = new Buffer('{"title":"500","summary":"Couldn\'t stringify JSON data"}');
       code = 500;
     }
     
-    res.writeHead(code,{
-      "Content-Type": "application/json;charset=utf-8",
-      "Content-Length": answer.length,
-      "Last-Modified": (new Date()).toUTCString()
-    });
+    headers['Content-Type'] = 'application/json;charset=utf-8';
     
-    if(req.method == 'GET') res.end(answer);
-    else res.end();
+  }else{
     
-    return;
+    answer.path = path;
+    
+    try{ answer.data = JSON.stringify(answer.data); }
+    catch(e){
+      answer.title = (answer.code = 500) + '';
+      answer.summary = 'Couldn\'t stringify JSON data';
+    }
+    
+    code = answer.code;
+    
+    data = new Buffer(template.replace(/{{(\w*)}}/g,function(m,s1){
+      return answer[s1];
+    }));
+    
+    headers['Content-Type'] = 'text/html;charset=utf-8';
+    
   }
   
-  answer.path = path;
+  headers['Last-Modified'] = (new Date()).toUTCString();
   
-  try{ answer.data = JSON.stringify(answer.data); }
-  catch(e){
-    answer.title = (answer.code = 500) + '';
-    answer.summary = 'Couldn\'t stringify JSON data';
+  if(req.method == 'GET'){
+    if(
+      answer.gzip &&
+      req.headers['accept-encoding'] &&
+      req.headers['accept-encoding'].indexOf('gzip') != -1
+    ){
+      
+      headers['Content-Encoding'] = 'gzip';
+      res.writeHead(code,headers);
+      
+      gzip = zlib.createGzip({level: answer.gzip});
+      gzip.write(data);
+      gzip.end();
+      gzip.pipe(res);
+      
+    }else{
+      
+      res.writeHead(code,headers);
+      res.end(data);
+      
+    }
+  }else{
+    
+    res.writeHead(code,headers);
+    res.end();
+    
   }
-  
-  code = answer.code;
-  
-  answer = new Buffer(template.replace(/{{(\w*)}}/g,function(m,s1){
-    return answer[s1];
-  }));
-  
-  res.writeHead(code,{
-    "Content-Type": "text/html;charset=utf-8",
-    "Content-Length": answer.length,
-    "Last-Modified": (new Date()).toUTCString()
-  });
-  
-  if(req.method == 'GET') res.end(answer);
-  else res.end();
 };
 
 function getLangs(str){
@@ -333,12 +352,13 @@ function Request(pathname,headers){
 
 Object.defineProperties(Request.prototype,{
   
-  answer: {value: function(title,summary,data){
+  answer: {value: function(title,summary,data,gzip){
     
     this[resolver].accept({
       title: title,
       summary: summary,
-      data: data
+      data: data,
+      gzip: gzip
     });
     
   }},
