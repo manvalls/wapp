@@ -153,7 +153,7 @@ Wapp.build = wrap(function*(location){
 
 function* walker(emitter,folders,path,mime){
   var req,res,e,i,m,cb,ext,ef,u,data,gzip,
-      pathname,file,stats,date,code,
+      pathname,file,stats,date,code,gzlvl,
       query,headers,request,answer;
   
   e = yield this[until]('request');
@@ -163,7 +163,7 @@ function* walker(emitter,folders,path,mime){
   res = e[1];
   
   u = url.parse(req.url,true);
-  pathname = u.pathname;
+  pathname = decodeURI(u.pathname);
   query = u.query;
   
   i = pathname.indexOf(path);
@@ -259,10 +259,11 @@ function* walker(emitter,folders,path,mime){
   
   if(query.format == 'json'){
     
-    if(answer.code){
-      code = answer.code;
-      delete answer.code;
-    }else code = 200;
+    code = answer.code;
+    delete answer.code;
+    
+    gzlvl = answer.gzip;
+    delete answer.gzip;
     
     try{ data = new Buffer(JSON.stringify(answer)); }
     catch(e){
@@ -283,6 +284,7 @@ function* walker(emitter,folders,path,mime){
     }
     
     code = answer.code;
+    gzlvl = answer.gzip;
     
     data = new Buffer(template.replace(/{{(\w*)}}/g,function(m,s1){
       return answer[s1];
@@ -293,7 +295,7 @@ function* walker(emitter,folders,path,mime){
   }
   
   headers['Last-Modified'] = (new Date()).toUTCString();
-  answer.gzip = answer.gzip || emitter.target.gzipLevel;
+  gzlvl = typeof gzlvl == 'number' ? gzlvl : emitter.target.gzipLevel;
   
   if(req.method == 'GET'){
     if(

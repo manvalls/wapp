@@ -10,7 +10,6 @@ var Emitter = require('y-emitter'),
     code = wapp_code,
     data = wapp_data,
     prefix = wapp_prefix,
-    gzip = wapp_gzip,
     title = document.title,
     
     k = 0,
@@ -79,19 +78,17 @@ if(global.history) window[walk](function* walker(){
 
 wapp.walk(function*(){
   var obj = {
-    rsc: location.href.slice(prefix.length).replace(/(\?|#).*$/,''),
+    rsc: decodeURI(location.href).slice(prefix.length).replace(/(\?|#).*$/,''),
     title: title,
     summary: summary,
     data: data,
-    code: code,
-    gzip: gzip
+    code: code
   };
   
   title = null;
   summary = null;
   data = null;
   code = null;
-  gzip = null;
   
   if(global.history) history.replaceState(obj,obj.title,location.href);
   
