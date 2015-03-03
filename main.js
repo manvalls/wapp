@@ -181,8 +181,7 @@ function* walker(emitter,folders,path,mime){
   m = pathname.match(/^~([^\/]*)\/(.*)/);
   
   if(m && folders[m[1]]) ef = file = p.resolve(folders[m[1]],m[2]);
-  else if(pathname.match(/\.\w*$/))
-    ef = file = p.resolve(emitter.target.defaultLocation || '',path.slice(1) + pathname);
+  else if(pathname.match(/\.\w*$/)) ef = file = p.resolve(folders['default'] || '',pathname);
   
   if(ef) try{
     headers = {};
@@ -294,7 +293,7 @@ function* walker(emitter,folders,path,mime){
   }
   
   headers['Last-Modified'] = (new Date()).toUTCString();
-  answer.gzip = answer.gzip || emitter.target.defaultGzipLevel;
+  answer.gzip = answer.gzip || emitter.target.gzipLevel;
   
   if(req.method == 'GET'){
     if(
