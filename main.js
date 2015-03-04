@@ -29,8 +29,9 @@ getConf = wrap(function*(location){
   var conf = {
         scripts: {main: './main.js'},
         folders: {
-          build: './build',
-          files: './files'
+          build:      './build',
+          files:      './files',
+          "default":  './default'
         },
         mime: {}
       },
