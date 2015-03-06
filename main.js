@@ -296,7 +296,9 @@ function* walker(emitter,folders,path,mime){
   }
   
   headers['Last-Modified'] = (new Date()).toUTCString();
+  
   gzlvl = typeof gzlvl == 'number' ? gzlvl : emitter.target.gzipLevel;
+  gzlvl = typeof gzlvl == 'number' ? gzlvl : this.gzipLevel;
   
   if(req.method == 'GET'){
     if(
