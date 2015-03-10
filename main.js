@@ -124,10 +124,10 @@ Wapp.build = wrap(function*(location){
     
     ret.push(file + '.js.gz');
     
-    (b = fs.createReadStream(file + '.js').
-    pipe(zlib.createGzip({level: 9}))).
-    pipe(fs.createWriteStream(file + '.js.gz'));
-    yield b[until]('end');
+    yield fs. createReadStream(file + '.js').
+              pipe(zlib.createGzip({level: 9})).
+              pipe( fs.createWriteStream(file + '.js.gz') )
+              [until]('close');
     
     ret.push(file + '.es5.js');
     
@@ -141,10 +141,10 @@ Wapp.build = wrap(function*(location){
     
     ret.push(file + '.es5.js.gz');
     
-    (b = fs.createReadStream(file + '.es5.js').
-    pipe(zlib.createGzip({level: 9}))).
-    pipe(fs.createWriteStream(file + '.es5.js.gz'));
-    yield b[until]('end');
+    yield fs. createReadStream(file + '.es5.js').
+              pipe(zlib.createGzip({level: 9})).
+              pipe( fs.createWriteStream(file + '.es5.js.gz') )
+              [until]('close');
   }
   
   return ret;

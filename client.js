@@ -22,6 +22,8 @@ summary = summary.innerHTML;
 emitter = new Emitter();
 wapp = module.exports = emitter.target;
 
+emitter.set('ready');
+
 function listener(){
   if(this.readyState == 4){
     if(this.status == 0) this.yd.reject(new Error('A network error happened'));
@@ -34,6 +36,9 @@ wapp.goTo = wrap(function*(rsc,replace){
       xhr,data,pk;
   
   if(!global.history) return location.href = url;
+  
+  emitter.unset('ready');
+  emitter.set('busy');
   
   rsc = rsc.replace(/(\?|#).*$/,'');
   
@@ -48,7 +53,7 @@ wapp.goTo = wrap(function*(rsc,replace){
   
   try{ yield xhr.yd; }
   catch(e){
-    location.href = prefix + rsc;
+    location.href = url;
     throw e;
   }
   
@@ -62,6 +67,9 @@ wapp.goTo = wrap(function*(rsc,replace){
     if(replace) history.replaceState(data,data.title,url);
     else history.pushState(data,data.title,url);
   }
+  
+  emitter.unset('busy');
+  emitter.set('ready');
   
   emitter.give('rsc',data);
 });
