@@ -119,8 +119,7 @@ Wapp.build = wrap(function*(location){
     file = p.resolve(folders.build,keys[i]);
     ret.push(file + '.js');
     
-    b.pipe(fs.createWriteStream(file + '.js'));
-    yield b[until]('end');
+    yield b.pipe(fs.createWriteStream(file + '.js'))[until]('close');
     
     ret.push(file + '.js.gz');
     
