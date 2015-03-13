@@ -3,6 +3,7 @@ var Emitter = require('y-emitter'),
     Su = require('u-su'),
     wrap = require('y-walk').wrap,
     Cb = require('y-callback/node'),
+    Lock = require('y-lock'),
     
     apply = require('u-proto/apply'),
     until = require('u-proto/until'),
@@ -19,8 +20,13 @@ var Emitter = require('y-emitter'),
     
     resolver = Su(),
     template = fs.readFileSync(p.resolve(__dirname,'template.html')).toString(),
+    args = {
+      cache: {},
+      packageCache: {},
+      fullPaths: true
+    },
     
-    getConf,
+    getConf,build,watch,lock,
     Wapp;
 
 // Wapp Object
@@ -89,18 +95,87 @@ module.exports = Wapp = wrap(function*(location,server,path){
   return emitter.target;
 });
 
+Wapp.lock = lock = new Lock();
 Wapp.Target = Target;
 
-Wapp.build = wrap(function*(location){
+function complete(n){
+  return (n > 10 ? '' : '0') + n;
+}
+
+build = wrap(function*(file,folder,name,log,w){
   var browserify = require('browserify'),
       regenerator = require('regenerator'),
       
-      conf = yield getConf(location),
+      b,bdl,cb,baseName,d,watchify;
+  
+  if(log){
+    d = new Date();
+    process.stdout.write(
+      complete(d.getHours()) + 
+      ':' + 
+      complete(d.getMinutes()) + 
+      ' - Building \u001b[3m' + name + '\u001b[0m... ');
+  }
+  
+  if(typeof w != 'object'){
+    b = browserify(args);
+    b.add(file);
+    
+    if(w) w = require('watchify')(b);
+    else w = b;
+  }
+  
+  bdl = w.bundle();
+  baseName = p.resolve(folder,name);
+  
+  yield bdl.pipe(fs.createWriteStream(baseName + '.js'))[until]('close');
+  
+  yield fs. createReadStream(baseName + '.js').
+            pipe(zlib.createGzip({level: 9})).
+            pipe( fs.createWriteStream(baseName + '.js.gz') )
+            [until]('close');
+  
+  fs.readFile(  baseName + '.js',cb = Cb()  );
+  fs.writeFile( baseName + '.es5.js',
+                regenerator.compile((yield cb).toString(),{includeRuntime: true}).code,
+                cb = Cb() );
+  
+  yield cb;
+  yield fs. createReadStream(baseName + '.es5.js').
+            pipe(zlib.createGzip({level: 9})).
+            pipe( fs.createWriteStream(baseName + '.es5.js.gz') )
+            [until]('close');
+  
+  if(log) console.log('\u001b[92mok\u001b[0m');
+  
+  return w;
+});
+
+watch = wrap(function*(file,folder,name,log){
+  var w;
+  
+  yield lock.take();
+  w = yield build(file,folder,name,log,true);
+  lock.give();
+  
+  while(true){
+    yield w[until]('update');
+    
+    yield lock.take();
+    yield build(file,folder,name,log,w);
+    lock.give();
+  }
+  
+});
+
+Wapp.build = wrap(function*(location,keepOn,log){
+  var conf = yield getConf(location),
       folders = conf.folders,
       scripts = conf.scripts,
       
-      ret = [],
-      keys,file,i,b,cb;
+      keys,i,cb,folder,file;
+  
+  if(log == null) log = true;
   
   try{
     fs.stat(folders.build,cb = Cb());
@@ -110,43 +185,20 @@ Wapp.build = wrap(function*(location){
     yield cb;
   }
   
+  folder = p.resolve(location,folders.build);
+  if(keepOn) lock = new Lock();
+  
   keys = Object.keys(scripts);
   for(i = 0;i < keys.length;i++){
     file = p.resolve(location,scripts[keys[i]]);
-    
-    b = browserify(file).bundle();
-    
-    file = p.resolve(folders.build,keys[i]);
-    ret.push(file + '.js');
-    
-    yield b.pipe(fs.createWriteStream(file + '.js'))[until]('close');
-    
-    ret.push(file + '.js.gz');
-    
-    yield fs. createReadStream(file + '.js').
-              pipe(zlib.createGzip({level: 9})).
-              pipe( fs.createWriteStream(file + '.js.gz') )
-              [until]('close');
-    
-    ret.push(file + '.es5.js');
-    
-    fs.readFile(file + '.js',cb = Cb());
-    
-    fs.writeFile( file + '.es5.js',
-                  regenerator.compile((yield cb).toString(),{includeRuntime: true}).code,
-                  cb = Cb());
-    
-    yield cb;
-    
-    ret.push(file + '.es5.js.gz');
-    
-    yield fs. createReadStream(file + '.es5.js').
-              pipe(zlib.createGzip({level: 9})).
-              pipe( fs.createWriteStream(file + '.es5.js.gz') )
-              [until]('close');
+    if(keepOn) watch(file,folder,keys[i],log,lock);
+    else{
+      yield lock.take();
+      yield build(file,folder,keys[i],log);
+      lock.give();
+    }
   }
   
-  return ret;
 });
 
 // Web Server

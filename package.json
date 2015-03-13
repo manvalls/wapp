@@ -10,7 +10,9 @@
     "y-callback": "",
     "u-proto": "",
     "y-resolver": "",
+    "y-lock": "",
     "browserify": "",
+    "watchify": "",
     "regenerator": ""
   },
   "repository": {
