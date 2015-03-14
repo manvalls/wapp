@@ -99,7 +99,7 @@ Wapp.lock = lock = new Lock();
 Wapp.Target = Target;
 
 function complete(n){
-  return (n > 10 ? '' : '0') + n;
+  return (n >= 10 ? '' : '0') + n;
 }
 
 build = wrap(function*(file,folder,name,log,w){
