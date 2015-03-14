@@ -106,7 +106,7 @@ build = wrap(function*(file,folder,name,log,w){
   var browserify = require('browserify'),
       regenerator = require('regenerator'),
       
-      b,bdl,cb,baseName,d,watchify;
+      b,bdl,cb,baseName,d,watchify,res;
   
   if(log){
     d = new Date();
@@ -128,25 +128,41 @@ build = wrap(function*(file,folder,name,log,w){
   bdl = w.bundle();
   baseName = p.resolve(folder,name);
   
-  yield bdl.pipe(fs.createWriteStream(baseName + '.js'))[until]('close');
-  
-  yield fs. createReadStream(baseName + '.js').
-            pipe(zlib.createGzip({level: 9})).
-            pipe( fs.createWriteStream(baseName + '.js.gz') )
-            [until]('close');
-  
-  fs.readFile(  baseName + '.js',cb = Cb()  );
-  fs.writeFile( baseName + '.es5.js',
-                regenerator.compile((yield cb).toString(),{includeRuntime: true}).code,
-                cb = Cb() );
-  
-  yield cb;
-  yield fs. createReadStream(baseName + '.es5.js').
-            pipe(zlib.createGzip({level: 9})).
-            pipe( fs.createWriteStream(baseName + '.es5.js.gz') )
-            [until]('close');
-  
-  if(log) console.log('\u001b[92mok\u001b[0m');
+  try{
+    
+    res = yield {
+      close: bdl.pipe(fs.createWriteStream(baseName + '.js'))[until]('close'),
+      error: bdl[until]('error')
+    };
+    
+    if(res[0] == 'error') throw res[1][0];
+    
+    yield fs. createReadStream(baseName + '.js').
+              pipe(zlib.createGzip({level: 9})).
+              pipe( fs.createWriteStream(baseName + '.js.gz') )
+              [until]('close');
+    
+    fs.readFile(  baseName + '.js',cb = Cb()  );
+    fs.writeFile( baseName + '.es5.js',
+                  regenerator.compile((yield cb).toString(),{includeRuntime: true}).code,
+                  cb = Cb() );
+    
+    yield cb;
+    yield fs. createReadStream(baseName + '.es5.js').
+              pipe(zlib.createGzip({level: 9})).
+              pipe( fs.createWriteStream(baseName + '.es5.js.gz') )
+              [until]('close');
+    
+    if(log) console.log('\u001b[92mok\u001b[0m');
+    
+  }catch(e){
+    
+    if(log){
+      console.log('\u001b[91mnot ok\u001b[0m');
+      console.log('\n' + e.stack + '\n');
+    }
+    
+  }
   
   return w;
 });

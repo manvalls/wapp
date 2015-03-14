@@ -3,6 +3,7 @@
   "version": "3.5.0",
   "description": "SPA framework",
   "main": "main.js",
+  "bin": "./bin/runner.sh",
   "dependencies": {
     "y-emitter": "",
     "u-su": "",
