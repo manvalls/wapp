@@ -1,4 +1,6 @@
 var path = require('path'),
+    help = require('u-help'),
+    
     Wapp = require('../main.js'),
     location = path.resolve(process.cwd(),process.argv[3] || '');
 
@@ -13,7 +15,14 @@ switch(process.argv[2]){
     break;
     
   default:
-    console.log('\nwapp (build|watch) [client location]\n');
+    
+    process.stdout.write(help('wapp <command> [<client location>]',{
+      Commands: {
+        build: 'Build client',
+        watch: 'Build client and rebuild when changes occur'
+      }
+    }));
+    
     break;
     
 }
