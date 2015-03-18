@@ -16,12 +16,12 @@ switch(process.argv[2]){
     
   default:
     
-    process.stdout.write(help('wapp <command> [<client location>]',{
+    help.show('wapp <command> [<client location>]',{
       Commands: {
         build: 'Build client',
         watch: 'Build client and rebuild when changes occur'
       }
-    }));
+    });
     
     break;
     
