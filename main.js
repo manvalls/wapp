@@ -168,14 +168,16 @@ build = wrap(function*(file,folder,name,log,w){
 });
 
 watch = wrap(function*(file,folder,name,log){
-  var w;
+  var w,uu;
   
   yield lock.take();
   w = yield build(file,folder,name,log,true);
   lock.give();
   
+  uu = w[until]('update');
   while(true){
-    yield w[until]('update');
+    yield uu;
+    uu = w[until]('update');
     
     yield lock.take();
     yield build(file,folder,name,log,w);
@@ -292,6 +294,7 @@ function* walker(emitter,folders,path,mime){
     }
     
     headers['Last-Modified'] = stats.mtime.toUTCString();
+    headers['Content-Length'] = stats.size;
     
     if(req.method == 'HEAD'){
       res.writeHead(200,headers);
