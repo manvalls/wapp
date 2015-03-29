@@ -4,6 +4,7 @@ var Emitter = require('y-emitter'),
     wrap = require('y-walk').wrap,
     Cb = require('y-callback/node'),
     Lock = require('y-lock'),
+    Hsm = require('hsm'),
     
     apply = require('u-proto/apply'),
     until = require('u-proto/until'),
@@ -13,7 +14,6 @@ var Emitter = require('y-emitter'),
     assert = require('assert'),
     fs = require('fs'),
     p = require('path'),
-    url = require('url'),
     http = require('http'),
     
     mime = require('./mime.js'),
@@ -76,6 +76,7 @@ Target.prototype = new Emitter.Target();
 
 module.exports = Wapp = wrap(function*(location,server,path){
   var emitter = new Emitter(Target),
+      hsm = new Hsm(server),
       conf;
   
   if(typeof location != 'string'){
@@ -86,11 +87,8 @@ module.exports = Wapp = wrap(function*(location,server,path){
   
   conf = yield getConf(location);
   
-  path = path || '/';
-  if(path.charAt(0) != '/') path = '/' + path;
-  if(path.charAt(path.length - 1) != '/') path += '/';
-  
-  server[walk](walker,[emitter,conf.folders,path,conf.mime]);
+  path = path || '';
+  hsm.on(path,onRequest,emitter,conf.folders,path,conf.mime);
   
   return emitter.target;
 });
@@ -221,25 +219,19 @@ Wapp.build = wrap(function*(location,keepOn,log){
 
 // Web Server
 
-function* walker(emitter,folders,path,mime){
+function* onRequest(e,c,emitter,folders,path,mime){
   var req,res,e,i,m,cb,ext,ef,u,data,gzip,
       pathname,file,stats,date,code,gzlvl,
       query,headers,request,answer;
   
-  e = yield this[until]('request');
-  this[walk](walker,arguments);
+  req = e.request;
+  res = e.response;
+  u = e.url;
   
-  req = e[0];
-  res = e[1];
-  
-  u = url.parse(req.url,true);
-  pathname = decodeURI(u.pathname);
+  pathname = u.pathname;
   query = u.query;
   
-  i = pathname.indexOf(path);
-  if(i != 0) return;
-  
-  pathname = pathname.slice(path.length);
+  pathname = pathname.slice(path.length + 1);
   if(pathname.indexOf('/.') != -1) return;
   
   if(!req.method.match(/^(GET|HEAD)$/)){
@@ -397,6 +389,7 @@ function* walker(emitter,folders,path,mime){
     res.end();
     
   }
+  
 };
 
 function getLangs(str){

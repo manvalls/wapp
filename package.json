@@ -13,6 +13,7 @@
     "u-proto": "",
     "y-resolver": "",
     "y-lock": "",
+    "hsm": "",
     "browserify": "",
     "watchify": "",
     "regenerator": ""
