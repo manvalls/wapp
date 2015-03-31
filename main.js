@@ -16,9 +16,11 @@ var Emitter = require('y-emitter'),
     p = require('path'),
     http = require('http'),
     
-    mime = require('./mime.js'),
-    
     resolver = Su(),
+    emitter = Su(),
+    cbcs = Su(),
+    e404 = Su(),
+    
     template = fs.readFileSync(p.resolve(__dirname,'template.html')).toString(),
     args = {
       cache: {},
@@ -31,13 +33,12 @@ var Emitter = require('y-emitter'),
 
 // Wapp Object
 
-getConf = wrap(function*(location){
+getConf = function(location){
   var conf = {
         scripts: {main: './main.js'},
         folders: {
           build:      './build',
-          files:      './files',
-          "default":  './default'
+          files:      './files'
         },
         mime: {}
       },
@@ -51,11 +52,7 @@ getConf = wrap(function*(location){
     opt = {};
   }
   
-  conf.mime[apply](mime);
-  
-  if(opt.folders) conf.folders[apply](opt.folders);
-  if(opt.scripts) conf.scripts[apply](opt.scripts);
-  if(opt.mime) conf.mime[apply](opt.mime);
+  conf[apply](opt);
   
   keys = Object.keys(conf.folders);
   for(i = 0;i < keys.length;i++){
@@ -68,16 +65,15 @@ getConf = wrap(function*(location){
   }
   
   return conf;
-});
+};
 
-function Target(){}
-
-Target.prototype = new Emitter.Target();
-
-module.exports = Wapp = wrap(function*(location,server,path){
-  var emitter = new Emitter(Target),
-      hsm = new Hsm(server),
-      conf;
+module.exports = Wapp = function(location,server,path){
+  var hsm = new Hsm(server),
+      folders,conf,i,j,keys;
+  
+  Emitter.Target.call(this,emitter);
+  
+  this[cbcs] = [];
   
   if(typeof location != 'string'){
     path = server;
@@ -85,16 +81,31 @@ module.exports = Wapp = wrap(function*(location,server,path){
     location = '';
   }
   
-  conf = yield getConf(location);
+  conf = getConf(location);
   
   path = path || '';
-  hsm.on(path,onRequest,emitter,conf.folders,path,conf.mime);
+  folders = conf.folders;
   
-  return emitter.target;
-});
+  keys = Object.keys(folders);
+  for(j = 0;j < keys.length;j++){
+    i = keys[j];
+    this[cbcs].push(
+      hsm.on(path + '/.' + i,onFile,folders[i],conf.mime)
+    );
+  }
+  
+  this[cbcs].push(
+    hsm.on(path,onRequest,this[emitter],folders,path)
+  );
+  
+};
+
+Wapp.prototype = new Emitter.Target();
+Wapp.prototype.constructor = Wapp;
 
 Wapp.lock = lock = new Lock();
-Wapp.Target = Target;
+
+// Build
 
 function complete(n){
   return (n >= 10 ? '' : '0') + n;
@@ -185,7 +196,7 @@ watch = wrap(function*(file,folder,name,log){
 });
 
 Wapp.build = wrap(function*(location,keepOn,log){
-  var conf = yield getConf(location),
+  var conf = getConf(location),
       folders = conf.folders,
       scripts = conf.scripts,
       
@@ -219,7 +230,19 @@ Wapp.build = wrap(function*(location,keepOn,log){
 
 // Web Server
 
-function* onRequest(e,c,emitter,folders,path,mime){
+function* onFile(e,c,location,mime){
+  
+  try{
+    yield e.sendFile(p.resolve(location,e.parts.join('/')),mime);
+  }catch(error){
+    console.log(error.stack);
+    e[e404] = error;
+    e.next();
+  }
+  
+}
+
+function* onRequest(e,c,emitter,folders,path){
   var req,res,e,i,m,cb,ext,ef,u,data,gzip,
       pathname,file,stats,date,code,gzlvl,
       query,headers,request,answer;
@@ -228,108 +251,54 @@ function* onRequest(e,c,emitter,folders,path,mime){
   res = e.response;
   u = e.url;
   
-  pathname = u.pathname;
+  pathname = e.parts.join('/');
   query = u.query;
   
-  pathname = pathname.slice(path.length + 1);
-  if(pathname.indexOf('/.') != -1) return;
-  
-  if(!req.method.match(/^(GET|HEAD)$/)){
-    res.writeHead(405,{'Allow': 'GET, HEAD'});
-    res.end();
-    return;
-  }
-  
-  m = pathname.match(/^~([^\/]*)\/(.*)/);
-  
-  if(m && folders[m[1]]) ef = file = p.resolve(folders[m[1]],m[2]);
-  else if(pathname.match(/\.\w*$/)) ef = file = p.resolve(folders['default'] || '',pathname);
-  
-  if(ef) try{
-    headers = {};
-    
-    while(m = ef.match(/([^\/]*)\.([^.]*)$/)){
-      ef = m[1];
-      ext = m[2];
-      
-      if(mime[ext]) headers[apply](mime[ext]);
+  if(e[e404]) answer = {code: 404};
+  else{
+    if(pathname[0] == '.') return;
+    if(pathname.indexOf('/.') != -1) return;
+    if(!req.method.match(/^(GET|HEAD)$/)){
+      answer = {
+        code: 405,
+        headers: {'Allow': 'GET, HEAD'}
+      };
+    }else{
+      request = new Request(pathname,req.headers);
+      emitter.give('request',request);
+      answer = yield request[resolver].yielded;
     }
-    
-    headers['Content-Type'] = headers['Content-Type'] || 'application/octet-stream';
-    
-    if(
-        req.headers['accept-encoding'] &&
-        req.headers['accept-encoding'].indexOf('gzip') != -1
-      ) try{
-      
-      fs.stat(file + '.gz',cb = Cb());
-      stats = yield cb;
-      
-      file = file + '.gz';
-      headers['Content-Encoding'] = 'gzip';
-      
-    }catch(e){}
-    
-    if(!stats){
-      fs.stat(file,cb = Cb());
-      stats = yield cb;
-    }
-    
-    if(req.headers['if-modified-since']){
-      date = new Date(req.headers['if-modified-since']);
-      
-      if(date >= stats.mtime){
-        res.writeHead(304,headers);
-        res.end();
-        return;
-      }
-    }
-    
-    headers['Last-Modified'] = stats.mtime.toUTCString();
-    headers['Content-Length'] = stats.size;
-    
-    if(req.method == 'HEAD'){
-      res.writeHead(200,headers);
-      res.end();
-      return;
-    }
-    
-    res.writeHead(200,headers);
-    fs.createReadStream(file).pipe(res);
-    
-    return;
-  }catch(e){ answer = {code: 404}; }
-  
-  if(!answer){
-    request = new Request(pathname,req.headers);
-    emitter.give('request',request);
-    
-    answer = yield request[resolver].yielded;
   }
   
   if(Math.floor(answer.code/100) == 3){
-    res.writeHead(answer.code);
+    if(answer.headers) res.writeHead(answer.code,answer.headers);
+    else res.writeHead(answer.code);
+    
     res.end();
     return;
   }
   
-  if(answer.code){
+  if(answer.code != 200){
     answer.title = answer.code + '';
-    if(!answer.summary) answer.summary = http.STATUS_CODES[answer.code];
-  }else answer.code = 200;
+    answer.summary = http.STATUS_CODES[answer.code];
+  }
   
-  headers = {};
+  headers = answer.headers || {};
   
   if(query.format == 'json'){
     
     code = answer.code;
-    delete answer.code;
+    gzlvl = answer.gzlvl;
     
-    gzlvl = answer.gzip;
-    delete answer.gzip;
-    
-    try{ data = new Buffer(JSON.stringify(answer)); }
-    catch(e){
+    try{
+      
+      data = new Buffer(JSON.stringify({
+        title: answer.title,
+        summary: answer.summary,
+        data: answer.data
+      }));
+      
+    }catch(e){
       data = new Buffer('{"title":"500","summary":"Couldn\'t stringify JSON data"}');
       code = 500;
     }
@@ -392,6 +361,8 @@ function* onRequest(e,c,emitter,folders,path,mime){
   
 };
 
+// Request
+
 function getLangs(str){
   var langs = [];
   
@@ -426,14 +397,16 @@ Object.defineProperties(Request.prototype,{
       title: title,
       summary: summary,
       data: data,
-      gzip: gzip
+      gzip: gzip,
+      code: 200
     });
     
   }},
   
-  sendCode: {value: function(code){
+  sendCode: {value: function(code,headers){
     this[resolver].accept({
-      code: code
+      code: code,
+      headers: headers
     });
   }},
   

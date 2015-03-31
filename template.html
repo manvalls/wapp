@@ -17,9 +17,10 @@ wapp_prefix = location.origin + '{{path}}/';
   
   try{
     eval('function* test(){}');
-    document.write('<script src="~build/main.js" defer><\/script>');
+    document.write('<script src=".build/main.js" defer><\/script>');
   }catch(e){
-    document.write('<script src="~build/main.es5.js" defer><\/script>');
+    document.write('<script src=".build/main.es5.js" defer><\/script>');
+    console.warn('You\'re using a shitty browser');
   }
   
 })();
