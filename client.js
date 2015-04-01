@@ -99,8 +99,7 @@ wapp.walk(function*(){
   code = null;
   
   if(global.history) history.replaceState(obj,obj.title,location.href);
-  
-  yield this.until('rsc listened');
+  if(!this.listeners('rsc')) yield this.until('rsc').listeners.change();
   
   if(global.history) emitter.give('rsc',history.state);
   else emitter.give('rsc',obj);

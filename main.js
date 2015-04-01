@@ -103,9 +103,9 @@ module.exports = Wapp = function(location,server,path){
 Wapp.prototype = new Emitter.Target();
 Wapp.prototype.constructor = Wapp;
 
-Wapp.lock = lock = new Lock();
-
 // Build
+
+Wapp.lock = lock = new Lock();
 
 function complete(n){
   return (n >= 10 ? '' : '0') + n;
