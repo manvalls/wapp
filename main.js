@@ -235,7 +235,6 @@ function* onFile(e,c,location,mime){
   try{
     yield e.sendFile(p.resolve(location,e.parts.join('/')),mime);
   }catch(error){
-    console.log(error.stack);
     e[e404] = error;
     e.next();
   }
