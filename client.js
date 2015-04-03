@@ -1,16 +1,18 @@
 var Emitter = require('y-emitter'),
-    walk = require('u-proto/walk'),
-    until = require('u-proto/until'),
     wrap = require('y-walk').wrap,
     Hybrid = require('y-resolver').Hybrid,
+    Su = require('u-su'),
     
-    summary = document.getElementById('wapp-summary'),
-    emitter,
+    summary = document.getElementById('2nEI77dDCExbZNo'),
+    emitter = new Emitter(),
+    start = new Hybrid(),
     
-    code = wapp_code,
-    data = wapp_data,
-    prefix = wapp_prefix,
+    code = global['c3hM9mLiIxK6DYj'],
+    data = global['1wqDxiG274aqleT'],
+    prefix = global['1ZN9cOC3OuKILjF'],
     title = document.title,
+    
+    path = Su(),
     
     k = 0,
     
@@ -19,10 +21,10 @@ var Emitter = require('y-emitter'),
 summary.remove();
 summary = summary.innerHTML;
 
-emitter = new Emitter();
 wapp = module.exports = emitter.target;
-
-emitter.set('ready');
+emitter.set('busy');
+emitter.syn('rsc ','top rsc');
+emitter.syn('path ','top path');
 
 function listener(){
   if(this.readyState == 4){
@@ -33,7 +35,7 @@ function listener(){
 
 wapp.goTo = wrap(function*(rsc,replace){
   var url = prefix + (rsc = (rsc || '').toString()),
-      xhr,data,pk;
+      xhr,data,pk,e;
   
   if(!global.history) return location.href = url;
   
@@ -63,45 +65,96 @@ wapp.goTo = wrap(function*(rsc,replace){
   data.code = xhr.status;
   data.rsc = rsc;
   
+  e = new Event(data);
+  
   if(global.history){
-    if(replace) history.replaceState(data,data.title,url);
-    else history.pushState(data,data.title,url);
+    if(replace) history.replaceState(e,e.title,url);
+    else history.pushState(e,e.title,url);
   }
   
   emitter.unset('busy');
   emitter.set('ready');
   
-  emitter.give('rsc',data);
+  onPopState({state: e});
 });
 
-if(global.history) window[walk](function* walker(){
-  var e = yield this[until]('popstate');
+function onPopState(e){
+  var event,en;
   
-  this[walk](walker);
   k = (k + 1)%1e15;
   
-  if(e.state) emitter.give('rsc',e.state);
-  else wapp.goTo(location.href.slice(prefix.length),true);
-});
+  if(e.state instanceof Event){
+    event = e.state;
+    
+    en = 'rsc ' + event.rsc;
+    if(wapp.listeners(en)) emitter.give(en,event);
+    else event.next();
+    
+  }else wapp.goTo(location.href.slice(prefix.length),true);
+}
+
+if(global.history) window.addEventListener('popstate',onPopState);
 
 wapp.walk(function*(){
   var obj = {
-    rsc: decodeURI(location.href).slice(prefix.length).replace(/(\?|#).*$/,''),
-    title: title,
-    summary: summary,
-    data: data,
-    code: code
-  };
+        rsc: decodeURI(location.href).slice(prefix.length).replace(/(\?|#).*$/,''),
+        title: title,
+        summary: summary,
+        data: data,
+        code: code
+      },
+      e = new Event(obj),
+      pk = k;
   
   title = null;
   summary = null;
   data = null;
   code = null;
   
-  if(global.history) history.replaceState(obj,obj.title,location.href);
-  if(!this.listeners('rsc')) yield this.until('rsc').listeners.change();
+  if(global.history) history.replaceState(e,e.title,location.href);
   
-  if(global.history) emitter.give('rsc',history.state);
-  else emitter.give('rsc',obj);
+  yield start;
+  if(pk != k) return;
+  
+  emitter.unset('busy');
+  emitter.set('ready');
+  
+  onPopState({state: e});
+});
+
+wapp.start = function(){
+  start.accept();
+};
+
+// Event
+
+function Event(data){
+  this.rsc = data.rsc;
+  this.title = data.title;
+  this.summary = data.summary;
+  this.data = data.data;
+  this.code = data.code;
+  
+  this.parts = [];
+  this[path] = this.rsc.split('/');
+}
+
+Object.defineProperties(Event.prototype,{
+  
+  next: {value: function(){
+    var p = this[path],
+        en;
+    
+    this.parts.unshift(p.pop());
+    while(p.length){
+      en = 'path ' + p.join('/');
+      if(wapp.listeners(en)) return emitter.give(en,this);
+      
+      this.parts.unshift(p.pop());
+    }
+    
+    emitter.give('rsc',this);
+  }}
+  
 });
 

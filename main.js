@@ -21,6 +21,8 @@ var Emitter = require('y-emitter'),
     cbcs = Su(),
     e404 = Su(),
     
+    path = Su(),
+    
     template = fs.readFileSync(p.resolve(__dirname,'template.html')).toString(),
     args = {
       cache: {},
@@ -68,40 +70,55 @@ getConf = function(location){
 };
 
 module.exports = Wapp = function(location,server,path){
-  var hsm = new Hsm(server),
-      folders,conf,i,j,keys;
-  
   Emitter.Target.call(this,emitter);
+  this[emitter].syn('rsc ','top rsc');
+  this[emitter].syn('path ','top path');
   
   this[cbcs] = [];
-  
-  if(typeof location != 'string'){
-    path = server;
-    server = location;
-    location = '';
-  }
-  
-  conf = getConf(location);
-  
-  path = path || '';
-  folders = conf.folders;
-  
-  keys = Object.keys(folders);
-  for(j = 0;j < keys.length;j++){
-    i = keys[j];
-    this[cbcs].push(
-      hsm.on(path + '/.' + i,onFile,folders[i],conf.mime)
-    );
-  }
-  
-  this[cbcs].push(
-    hsm.on(path,onRequest,this[emitter],folders,path)
-  );
-  
+  if(arguments.length) this.attach(location,server,path);
 };
 
 Wapp.prototype = new Emitter.Target();
 Wapp.prototype.constructor = Wapp;
+
+Object.defineProperties(Wapp.prototype,{
+  
+  detach: {value: function(){
+    var cbc;
+    
+    while(cbc = this[cbcs].shift()) cbc.detach();
+  }},
+  
+  attach: {value: function(location,server,path){
+    var hsm = new Hsm(server),
+        folders,conf,i,j,keys;
+    
+    if(typeof location != 'string'){
+      path = server;
+      server = location;
+      location = '';
+    }
+    
+    conf = getConf(location);
+    
+    path = path || '';
+    folders = conf.folders;
+    
+    keys = Object.keys(folders);
+    for(j = 0;j < keys.length;j++){
+      i = keys[j];
+      this[cbcs].push(
+        hsm.on(path + '/.' + i,onFile,folders[i],conf.mime)
+      );
+    }
+    
+    this[cbcs].push(
+      hsm.on(path,onRequest,this[emitter],folders,path)
+    );
+    
+  }}
+  
+});
 
 // Build
 
@@ -241,10 +258,10 @@ function* onFile(e,c,location,mime){
   
 }
 
-function* onRequest(e,c,emitter,folders,path){
-  var req,res,e,i,m,cb,ext,ef,u,data,gzip,
-      pathname,file,stats,date,code,gzlvl,
-      query,headers,request,answer;
+function* onRequest(e,c,wapp,folders,path){
+  var req,res,u,data,gzip,pathname,
+      code,gzlvl,query,headers,
+      request,answer,en;
   
   req = e.request;
   res = e.response;
@@ -258,13 +275,19 @@ function* onRequest(e,c,emitter,folders,path){
     if(pathname[0] == '.') return;
     if(pathname.indexOf('/.') != -1) return;
     if(!req.method.match(/^(GET|HEAD)$/)){
+      
       answer = {
         code: 405,
         headers: {'Allow': 'GET, HEAD'}
       };
+      
     }else{
-      request = new Request(pathname,req.headers);
-      emitter.give('request',request);
+      request = new Request(pathname,e.parts,req.headers,wapp);
+      
+      en = 'rsc ' + pathname;
+      if(wapp.target.listeners(en)) wapp.give(en,request);
+      else request.next();
+      
       answer = yield request[resolver].yielded;
     }
   }
@@ -327,7 +350,7 @@ function* onRequest(e,c,emitter,folders,path){
   
   headers['Last-Modified'] = (new Date()).toUTCString();
   
-  gzlvl = typeof gzlvl == 'number' ? gzlvl : emitter.target.gzipLevel;
+  gzlvl = typeof gzlvl == 'number' ? gzlvl : wapp.target.gzipLevel;
   gzlvl = typeof gzlvl == 'number' ? gzlvl : this.gzipLevel;
   
   if(req.method == 'GET'){
@@ -362,8 +385,15 @@ function* onRequest(e,c,emitter,folders,path){
 
 // Request
 
+function compare(a,b){
+  return b.q - a.q;
+}
+
 function getLangs(str){
-  var langs = [];
+  var langs = [],
+      result = [],
+      map = {},
+      i,lang;
   
   str.replace(/(([a-z]+)[\-a-z]*)(;\s*q\s*=\s*([^,\s]+))?/gi,function(){
     langs.push({
@@ -373,19 +403,41 @@ function getLangs(str){
     });
   });
   
-  return langs;
+  langs.sort(compare);
+  
+  for(i = 0;i < langs.length;i++){
+    
+    lang = langs[i].lang;
+    if(!map[lang]){
+      result.push(lang);
+      map[lang] = true;
+    }
+    
+    lang = langs[i].primary;
+    if(!map[lang]){
+      result.push(lang);
+      map[lang] = true;
+    }
+    
+  }
+  
+  return Object.freeze(result);
 }
 
-function Request(pathname,headers){
+function Request(pathname,p,headers,e){
   this[resolver] = new Resolver();
   
-  if(headers['if-modified-since'])
-  Object.defineProperty(this,'date',{value: new Date(headers['if-modified-since'])});
-  else Object.defineProperty(this,'date',{value: new Date(0)});
+  if(headers['if-modified-since']) this.date = new Date(headers['if-modified-since']);
+  else this.date = new Date(0);
   
-  if(headers['accept-language'])
-  Object.defineProperty(this,'langs',{value: getLangs(headers['accept-language'])});
-  else Object.defineProperty(this,'langs',{value: []});
+  if(headers['accept-language']) this.langs = getLangs(headers['accept-language']);
+  else this.langs = Object.freeze([]);
+  
+  this.rsc = pathname;
+  this.parts = [];
+  
+  this[path] = p;
+  this[emitter] = e;
 }
 
 Object.defineProperties(Request.prototype,{
@@ -411,6 +463,22 @@ Object.defineProperties(Request.prototype,{
   
   useCache: {value: function(){
     this.sendCode(304);
+  }},
+  
+  next: {value: function(){
+    var p = this[path],
+        e = this[emitter],
+        en;
+    
+    this.parts.unshift(p.pop());
+    while(p.length){
+      en = 'path ' + p.join('/');
+      
+      if(e.target.listeners(en)) return e.give(en,this);
+      this.parts.unshift(p.pop());
+    }
+    
+    e.give('request',this);
   }}
   
 });
