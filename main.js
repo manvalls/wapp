@@ -130,9 +130,10 @@ function complete(n){
 
 build = wrap(function*(file,folder,name,log,w){
   var browserify = require('browserify'),
-      regenerator = require('regenerator'),
+      babel = require('babel-core'),
       
-      b,bdl,cb,baseName,d,watchify,res;
+      b,bdl,cb,baseName,d,watchify,res,
+      code,shim,files,i;
   
   if(log){
     d = new Date();
@@ -168,12 +169,31 @@ build = wrap(function*(file,folder,name,log,w){
               pipe( fs.createWriteStream(baseName + '.js.gz') )
               [until]('close');
     
-    fs.readFile(  baseName + '.js',cb = Cb()  );
-    fs.writeFile( baseName + '.es5.js',
-                  regenerator.compile((yield cb).toString(),{includeRuntime: true}).code,
-                  cb = Cb() );
+    fs.readFile(baseName + '.js',cb = Cb());
     
+    code = babel.transform((yield cb).toString(),{
+      blacklist: ['strict'],
+      nonStandard: false
+    }).code;
+    
+    fs.readdir(__dirname + '/shims',cb = Cb());
+    files = yield cb;
+    
+    for(i = 0;i < files.length;i++){
+      shim = __dirname + '/shims/' + files[i];
+      
+      fs.readFile(shim,cb = Cb());
+      code = (yield cb).toString() + '\n\n\n' + code;
+    }
+    
+    shim = require.resolve('babel-core').replace(/(^.*\/babel-core\/).*$/,'$1browser-polyfill.js');
+    
+    fs.readFile(shim,cb = Cb());
+    code = (yield cb).toString() + '\n\n\n' + code;
+    
+    fs.writeFile(baseName + '.es5.js',code,cb = Cb());
     yield cb;
+    
     yield fs. createReadStream(baseName + '.es5.js').
               pipe(zlib.createGzip({level: 9})).
               pipe( fs.createWriteStream(baseName + '.es5.js.gz') )
