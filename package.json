@@ -1,6 +1,6 @@
 {
   "name": "wapp",
-  "version": "6.0.0",
+  "version": "6.1.0",
   "description": "SPA framework",
   "main": "main.js",
   "bin": "./bin/runner.sh",
@@ -14,7 +14,6 @@
     "y-resolver": "",
     "y-lock": "",
     "hsm": "",
-    
     "browserify": "^9",
     "watchify": "^3",
     "babel-core": "^5"
