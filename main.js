@@ -24,11 +24,6 @@ var Emitter = require('y-emitter'),
     path = Su(),
     
     template = fs.readFileSync(p.resolve(__dirname,'template.html')).toString(),
-    args = {
-      cache: {},
-      packageCache: {},
-      fullPaths: true
-    },
     
     getConf,build,watch,lock,
     Wapp;
@@ -128,12 +123,69 @@ function complete(n){
   return (n >= 10 ? '' : '0') + n;
 }
 
+writeBdl = wrap(function*(bdl,file){
+  var res = yield [
+    {
+      finish: bdl.pipe(fs.createWriteStream(file))[until]('finish'),
+      error: bdl[until]('error')
+    },
+    {
+      finish: bdl.  pipe(zlib.createGzip({level: 9})).
+                    pipe(fs.createWriteStream(file + '.gz'))[until]('finish'),
+      error: bdl[until]('error')
+    }
+  ];
+  
+  if(res[0].error) throw res[0].error[0];
+  if(res[1].error) throw res[1].error[0];
+  
+});
+
+writeShimedBdl = wrap(function*(bdl,file){
+  var code = '',
+      res,files,shim,cb,cb2;
+  
+  do{
+    
+    res = yield {
+      data: bdl[until]('data'),
+      error: bdl[until]('error'),
+      end: bdl[until]('end')
+    };
+    
+    if(res.error) throw res.error[0];
+    if(res.data) code += res.data[0];
+    
+  }while(res.data);
+  
+  fs.readdir(__dirname + '/shims',cb = Cb());
+  files = yield cb;
+  
+  files.sort();
+  files.reverse();
+  
+  for(i = 0;i < files.length;i++){
+    shim = __dirname + '/shims/' + files[i];
+    
+    fs.readFile(shim,cb = Cb());
+    code = (yield cb).toString() + '\n\n\n' + code;
+  }
+  
+  zlib.gzip(code,{level: 9},cb = Cb());
+  
+  fs.writeFile(file,code,cb2 = Cb());
+  fs.writeFile(file + '.gz',yield cb,cb = Cb());
+  
+  yield cb;
+  yield cb2;
+});
+
 build = wrap(function*(file,folder,name,log,w){
   var browserify = require('browserify'),
-      babel = require('babel-core'),
+      babelify = require('babelify'),
       
       b,bdl,cb,baseName,d,watchify,res,
-      code,shim,files,i;
+      code,shim,files,i,watchify;
   
   if(log){
     d = new Date();
@@ -145,62 +197,47 @@ build = wrap(function*(file,folder,name,log,w){
   }
   
   if(typeof w != 'object'){
-    b = browserify(args);
+    
+    b = browserify({
+      cache: {},
+      packageCache: {},
+      fullPaths: true
+    });
+    
     b.add(file);
     
-    if(w) w = require('watchify')(b);
-    else w = b;
+    b.es5 = browserify({
+      cache: {},
+      packageCache: {},
+      fullPaths: true
+    });
+    
+    b.es5.add(file);
+    b.es5.transform(babelify.configure({
+      blacklist: ['strict'],
+      optional: ['runtime'],
+      nonStandard: false
+    }));
+    
+    if(w){
+      watchify = require('watchify');
+      
+      w = watchify(b);
+      w.es5 = watchify(b.es5);
+    }else w = b;
   }
   
   bdl = w.bundle();
+  bdl.es5 = w.es5.bundle();
+  
   baseName = p.resolve(folder,name);
   
   try{
     
-    res = yield {
-      close: bdl.pipe(fs.createWriteStream(baseName + '.js'))[until]('close'),
-      error: bdl[until]('error')
-    };
-    
-    if(res.error) throw res.error[0];
-    
-    yield fs. createReadStream(baseName + '.js').
-              pipe(zlib.createGzip({level: 9})).
-              pipe( fs.createWriteStream(baseName + '.js.gz') )
-              [until]('close');
-    
-    fs.readFile(baseName + '.js',cb = Cb());
-    
-    code = babel.transform((yield cb).toString(),{
-      blacklist: ['strict'],
-      nonStandard: false
-    }).code;
-    
-    fs.readdir(__dirname + '/shims',cb = Cb());
-    files = yield cb;
-    
-    files.sort();
-    files.reverse();
-    
-    for(i = 0;i < files.length;i++){
-      shim = __dirname + '/shims/' + files[i];
-      
-      fs.readFile(shim,cb = Cb());
-      code = (yield cb).toString() + '\n\n\n' + code;
-    }
-    
-    shim = require.resolve('babel-core').replace(/(^.*\/babel-core\/).*$/,'$1browser-polyfill.js');
-    
-    fs.readFile(shim,cb = Cb());
-    code = (yield cb).toString() + '\n\n\n' + code;
-    
-    fs.writeFile(baseName + '.es5.js',code,cb = Cb());
-    yield cb;
-    
-    yield fs. createReadStream(baseName + '.es5.js').
-              pipe(zlib.createGzip({level: 9})).
-              pipe( fs.createWriteStream(baseName + '.es5.js.gz') )
-              [until]('close');
+    yield [
+      writeBdl(bdl,baseName + '.js'),
+      writeShimedBdl(bdl.es5,baseName + '.es5.js')
+    ];
     
     if(log) console.log('\u001b[92mok\u001b[0m');
     

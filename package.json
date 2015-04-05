@@ -14,9 +14,10 @@
     "y-resolver": "",
     "y-lock": "",
     "hsm": "",
+    
     "browserify": "^9",
     "watchify": "^3",
-    "babel-core": "^5"
+    "babelify": "^6"
   },
   "repository": {
     "type": "git",
