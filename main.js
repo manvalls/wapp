@@ -162,7 +162,7 @@ build = wrap(function*(file,folder,name,log,w){
       error: bdl[until]('error')
     };
     
-    if(res[0] == 'error') throw res[1][0];
+    if(res.error) throw res.error[0];
     
     yield fs. createReadStream(baseName + '.js').
               pipe(zlib.createGzip({level: 9})).
@@ -178,6 +178,9 @@ build = wrap(function*(file,folder,name,log,w){
     
     fs.readdir(__dirname + '/shims',cb = Cb());
     files = yield cb;
+    
+    files.sort();
+    files.reverse();
     
     for(i = 0;i < files.length;i++){
       shim = __dirname + '/shims/' + files[i];
