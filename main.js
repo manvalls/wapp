@@ -239,13 +239,14 @@ build = wrap(function*(file,folder,name,log,w){
       writeShimedBdl(bdl.es5,baseName + '.es5.js')
     ];
     
-    if(log) console.log('\u001b[92mok\u001b[0m');
+    if(log) console.log('\u001b[92m✓\u001b[0m');
     
   }catch(e){
     
     if(log){
-      console.log('\u001b[91mnot ok\u001b[0m');
-      console.log('\n' + e.stack + '\n');
+      console.log('\u001b[91m✗\u001b[0m');
+      try{ console.log('\n' + e.errors[1].stack.match(/SyntaxError:\s((.|\n)*?)\n\s*at/)[1] + '\n'); }
+      catch(e2){ console.log('\n' + e.message + '\n'); }
     }
     
   }
