@@ -197,20 +197,17 @@ build = wrap(function*(file,folder,name,log,w){
   }
   
   if(typeof w != 'object'){
-    
-    b = browserify({
-      cache: {},
-      packageCache: {},
-      fullPaths: true
-    });
+    if(w){
+      watchify = require('watchify');
+      
+      b = browserify(watchify.args);
+      b.es5 = browserify(watchify.args);
+    }else{
+      b = browserify();
+      b.es5 = browserify();
+    }
     
     b.add(file);
-    
-    b.es5 = browserify({
-      cache: {},
-      packageCache: {},
-      fullPaths: true
-    });
     
     b.es5.add(file);
     b.es5.transform(babelify.configure({
@@ -220,8 +217,6 @@ build = wrap(function*(file,folder,name,log,w){
     }));
     
     if(w){
-      watchify = require('watchify');
-      
       w = watchify(b);
       w.es5 = watchify(b.es5);
     }else w = b;
