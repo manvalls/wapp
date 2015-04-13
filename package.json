@@ -16,7 +16,8 @@
     "hsm": "",
     "browserify": "^9",
     "watchify": "^3",
-    "babelify": "^6"
+    "babelify": "^6",
+    "babel-runtime": "^5"
   },
   "repository": {
     "type": "git",
