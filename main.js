@@ -24,9 +24,15 @@ var Emitter = require('y-emitter'),
     path = Su(),
     
     template = fs.readFileSync(p.resolve(__dirname,'template.html')).toString(),
+    args = {cache:{}, packageCache: {}};
     
     getConf,build,watch,lock,
     Wapp;
+
+if(process.env.NODE_PATH) args.paths = process.env.NODE_PATH.split(':');
+else args.paths = [];
+
+args.push(__dirname);
 
 // Wapp Object
 
