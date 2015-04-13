@@ -32,7 +32,7 @@ var Emitter = require('y-emitter'),
 if(process.env.NODE_PATH) args.paths = process.env.NODE_PATH.split(':');
 else args.paths = [];
 
-args.push(__dirname);
+args.paths.push(__dirname);
 
 // Wapp Object
 
