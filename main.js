@@ -32,7 +32,8 @@ var Emitter = require('y-emitter'),
 if(process.env.NODE_PATH) args.paths = process.env.NODE_PATH.split(':');
 else args.paths = [];
 
-args.paths.push(__dirname);
+args.paths.push(__dirname + '/node_modules');
+console.log(args.paths);
 
 // Wapp Object
 
@@ -206,11 +207,11 @@ build = wrap(function*(file,folder,name,log,w){
     if(w){
       watchify = require('watchify');
       
-      b = browserify(watchify.args);
-      b.es5 = browserify(watchify.args);
+      b = browserify(args);
+      b.es5 = browserify(args);
     }else{
-      b = browserify();
-      b.es5 = browserify();
+      b = browserify(args);
+      b.es5 = browserify(args);
     }
     
     b.add(file);
