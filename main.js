@@ -33,7 +33,6 @@ if(process.env.NODE_PATH) args.paths = process.env.NODE_PATH.split(':');
 else args.paths = [];
 
 args.paths.push(__dirname + '/node_modules');
-console.log(args.paths);
 
 // Wapp Object
 
