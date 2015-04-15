@@ -22,6 +22,7 @@ var Emitter = require('y-emitter'),
     e404 = Su(),
     
     path = Su(),
+    byJson = '4qTpdL-kUvC6',
     
     template = fs.readFileSync(p.resolve(__dirname,'template.html')).toString(),
     args = {cache:{}, packageCache: {}},
@@ -144,7 +145,6 @@ writeBdl = wrap(function*(bdl,file){
   
   if(res[0].error) throw res[0].error[0];
   if(res[1].error) throw res[1].error[0];
-  
 });
 
 writeShimedBdl = wrap(function*(bdl,file){
@@ -344,7 +344,7 @@ function* onRequest(e,c,wapp,folders,path){
       };
       
     }else{
-      request = new Request(pathname,e.parts,req.headers,wapp);
+      request = new Request(pathname,e.parts,req.headers,wapp,query);
       
       en = 'rsc ' + pathname;
       if(wapp.target.listeners(en)) wapp.give(en,request);
@@ -369,7 +369,7 @@ function* onRequest(e,c,wapp,folders,path){
   
   headers = answer.headers || {};
   
-  if(query.format == 'json'){
+  if(byJson in query){
     
     code = answer.code;
     gzlvl = answer.gzlvl;
@@ -486,7 +486,7 @@ function getLangs(str){
   return Object.freeze(result);
 }
 
-function Request(pathname,p,headers,e){
+function Request(pathname,p,headers,e,query){
   this[resolver] = new Resolver();
   
   if(headers['if-modified-since']) this.date = new Date(headers['if-modified-since']);
@@ -496,6 +496,7 @@ function Request(pathname,p,headers,e){
   else this.langs = Object.freeze([]);
   
   this.rsc = pathname;
+  this.query = query;
   this.parts = [];
   
   this[path] = p;

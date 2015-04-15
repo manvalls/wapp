@@ -7,6 +7,9 @@ var Emitter = require('y-emitter'),
     emitter = new Emitter(),
     start = new Hybrid(),
     
+    byJson = '4qTpdL-kUvC6',
+    fromWapp = '4qWfaW-14lt5',
+    
     code = global['c3hM9mLiIxK6DYj'],
     data = global['1wqDxiG274aqleT'],
     prefix = global['1ZN9cOC3OuKILjF'],
@@ -33,20 +36,58 @@ function listener(){
   }
 }
 
-wapp.goTo = wrap(function*(rsc,replace){
-  var url = prefix + (rsc = (rsc || '').toString()),
-      xhr,data,pk,e;
+function fillWithQuery(obj,path){
+  var m = path.match(/^(.*?)(?:\?(.*?))?(?:#(.*?))?$/);
   
-  if(!global.history) return location.href = url;
+  obj.rsc = m[1].replace('%3F','?').replace('%23','#');
+  obj.query = {};
+  obj.fragment = decodeURIComponent(m[3]);
+  
+  if(m[2]){
+    
+    m[2].replace(/([^&]+)(?:\=([^&]*))?/g,function(m,key,value){
+      key = decodeURIComponent(key);
+      value = decodeURIComponent(value || '');
+      
+      obj.query[key] = value;
+    });
+    
+  }
+  
+  return obj;
+}
+
+function fromQuery(query){
+  var keys = Object.keys(query),
+      txt = '',
+      i,j;
+  
+  for(j = 0;j < keys.length;j++){
+    i = keys[j];
+    txt += (txt?'&':'') + encodeURIComponent(i) + (query[i] ? '=' + encodeURIComponent(query[i] + '') : '');
+  }
+  
+  return txt;
+}
+
+wapp.goTo = wrap(function*(rsc,opt){
+  var url,xhr,data,pk,query,queryTxt;
   
   emitter.unset('ready');
   emitter.set('busy');
   
-  rsc = rsc.replace(/(\?|#).*$/,'');
+  opt = opt || {};
+  query = opt.query || {};
+  queryTxt = fromQuery(query);
+  
+  rsc = rsc.replace('?','%3F').replace('#','%23');
+  url = prefix + rsc + (queryTxt ? '?' + queryTxt : '') + (opt.fragment ? '#' + opt.fragment : '');
+  
+  if(!global.history) return location.href = url;
   
   xhr = new XMLHttpRequest();
   xhr.yd = new Hybrid();
-  xhr.open('GET',prefix + rsc + '?format=json',true);
+  xhr.open('GET',url + (queryTxt ? '&' : '?') + byJson,true);
   xhr.onreadystatechange = listener;
   xhr.send();
   
@@ -64,18 +105,20 @@ wapp.goTo = wrap(function*(rsc,replace){
   data = JSON.parse(xhr.responseText);
   data.code = xhr.status;
   data.rsc = rsc;
+  data.query = query;
+  data.fragment = opt.fragment;
   
-  e = new Event(data);
+  data[fromWapp] = true;
   
   if(global.history){
-    if(replace) history.replaceState(e,e.title,url);
-    else history.pushState(e,e.title,url);
+    if(opt.replaceState) history.replaceState(data,data.title,url);
+    else history.pushState(data,data.title,url);
   }
   
   emitter.unset('busy');
   emitter.set('ready');
   
-  onPopState({state: e});
+  onPopState({state: data});
 });
 
 function onPopState(e){
@@ -83,35 +126,39 @@ function onPopState(e){
   
   k = (k + 1)%1e15;
   
-  if(e.state instanceof Event){
-    event = e.state;
+  if(e.state && e.state[fromWapp]){
+    event = new Event(e.state);
+    current = wapp.current = event;
     
     en = 'rsc ' + event.rsc;
     if(wapp.listeners(en)) emitter.give(en,event);
     else event.next();
     
-  }else wapp.goTo(location.href.slice(prefix.length),true);
+  }else wapp.goTo(location.href.slice(prefix.length),{replaceState: true});
 }
 
 if(global.history) window.addEventListener('popstate',onPopState);
 
 wapp.walk(function*(){
   var obj = {
-        rsc: decodeURI(location.href).slice(prefix.length).replace(/(\?|#).*$/,''),
         title: title,
         summary: summary,
         data: data,
         code: code
       },
-      e = new Event(obj),
       pk = k;
+  
+  obj[fromWapp] = true;
+  fillWithQuery(obj,decodeURI(location.href).slice(prefix.length));
   
   title = null;
   summary = null;
   data = null;
   code = null;
   
-  if(global.history) history.replaceState(e,e.title,location.href);
+  wapp.current = new Event(obj);
+  
+  if(global.history) history.replaceState(obj,obj.title,location.href);
   
   yield start;
   if(pk != k) return;
@@ -119,7 +166,7 @@ wapp.walk(function*(){
   emitter.unset('busy');
   emitter.set('ready');
   
-  onPopState({state: e});
+  onPopState({state: obj});
 });
 
 wapp.start = function(){
@@ -134,6 +181,9 @@ function Event(data){
   this.summary = data.summary;
   this.data = data.data;
   this.code = data.code;
+  
+  this.query = data.query;
+  this.fragment = data.fragment;
   
   this.parts = [];
   this[path] = this.rsc.split('/');

@@ -10,4 +10,4 @@ while [ -h "$SOURCE" ]; do
 done
 DIR="$( cd -P "$( dirname "$SOURCE" )" && pwd )"
 
-node --harmony $DIR/bin.js $@
+node --harmony "$DIR/bin.js" $@
