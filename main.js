@@ -311,11 +311,11 @@ Wapp.build = wrap(function*(location,keepOn,log){
 
 function* onFile(e,c,location,mime,log){
   
-  if(log) if(log(e,location)) return;
-  
   try{
     yield e.sendFile(p.resolve(location,e.parts.join('/')),mime);
+    if(log) log(null,e,location);
   }catch(error){
+    if(log) log(error,e,location);
     e[e404] = error;
     e.next();
   }
