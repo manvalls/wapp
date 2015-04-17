@@ -71,13 +71,13 @@ getConf = function(location){
   return conf;
 };
 
-module.exports = Wapp = function(location,server,path){
+module.exports = Wapp = function(location,server,path,log){
   Emitter.Target.call(this,emitter);
   this[emitter].syn('rsc ','top rsc');
   this[emitter].syn('path ','top path');
   
   this[cbcs] = [];
-  if(arguments.length) this.attach(location,server,path);
+  if(arguments.length) this.attach(location,server,path,log);
 };
 
 Wapp.prototype = new Emitter.Target();
@@ -91,7 +91,7 @@ Object.defineProperties(Wapp.prototype,{
     while(cbc = this[cbcs].shift()) cbc.detach();
   }},
   
-  attach: {value: function(location,server,path){
+  attach: {value: function(location,server,path,log){
     var hsm = new Hsm(server),
         folders,conf,i,j,keys;
     
@@ -110,7 +110,7 @@ Object.defineProperties(Wapp.prototype,{
     for(j = 0;j < keys.length;j++){
       i = keys[j];
       this[cbcs].push(
-        hsm.on(path + '/.' + i,onFile,folders[i],conf.mime)
+        hsm.on(path + '/.' + i,onFile,folders[i],conf.mime,log)
       );
     }
     
@@ -309,7 +309,9 @@ Wapp.build = wrap(function*(location,keepOn,log){
 
 // Web Server
 
-function* onFile(e,c,location,mime){
+function* onFile(e,c,location,mime,log){
+  
+  if(log) if(log(e,location)) return;
   
   try{
     yield e.sendFile(p.resolve(location,e.parts.join('/')),mime);
@@ -344,7 +346,7 @@ function* onRequest(e,c,wapp,folders,path){
       };
       
     }else{
-      request = new Request(pathname,e.parts,req.headers,wapp,query);
+      request = new Request(pathname,e.parts,req.headers,wapp,query,req.connection.remoteAddress);
       
       en = 'rsc ' + pathname;
       if(wapp.target.listeners(en)) wapp.give(en,request);
@@ -486,7 +488,7 @@ function getLangs(str){
   return Object.freeze(result);
 }
 
-function Request(pathname,p,headers,e,query){
+function Request(pathname,p,headers,e,query,addr){
   this[resolver] = new Resolver();
   
   if(headers['if-modified-since']) this.date = new Date(headers['if-modified-since']);
@@ -494,6 +496,11 @@ function Request(pathname,p,headers,e,query){
   
   if(headers['accept-language']) this.langs = getLangs(headers['accept-language']);
   else this.langs = Object.freeze([]);
+  
+  if(headers['x-forwarded-for']) this.ip = headers['x-forwarded-for'].split(', ')[0];
+  else this.ip = addr;
+  
+  this.addr = addr;
   
   this.rsc = pathname;
   this.query = query;
