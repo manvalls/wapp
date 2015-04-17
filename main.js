@@ -37,7 +37,7 @@ args.paths.push(__dirname + '/node_modules');
 
 // Wapp Object
 
-getConf = function(location){
+getConf = function(opt){
   var conf = {
         scripts: {main: './main.js'},
         folders: {
@@ -46,38 +46,40 @@ getConf = function(location){
         },
         mime: {}
       },
-      opt,file,cb,keys,i;
+      file,cb,keys,i;
   
-  location = p.resolve(location || '');
+  opt = opt || '';
   
-  try{
-    opt = require(p.resolve(location,'client'));
-  }catch(e){
-    opt = {};
+  if(typeof opt == 'string'){
+    conf.baseDir = opt;
+    
+    try{ opt = require(p.resolve(location,'client')); }
+    catch(e){ opt = {}; }
   }
   
   conf[apply](opt);
+  conf.baseDir = p.resolve(conf.baseDir);
   
   keys = Object.keys(conf.folders);
   for(i = 0;i < keys.length;i++){
-    conf.folders[keys[i]] = p.resolve(location,conf.folders[keys[i]]);
+    conf.folders[keys[i]] = p.resolve(conf.baseDir,conf.folders[keys[i]]);
   }
   
   keys = Object.keys(conf.scripts);
   for(i = 0;i < keys.length;i++){
-    conf.scripts[keys[i]] = p.resolve(location,conf.scripts[keys[i]]);
+    conf.scripts[keys[i]] = p.resolve(conf.baseDir,conf.scripts[keys[i]]);
   }
   
   return conf;
 };
 
-module.exports = Wapp = function(location,server,path,log){
+module.exports = Wapp = function(server,opt){
   Emitter.Target.call(this,emitter);
   this[emitter].syn('rsc ','top rsc');
   this[emitter].syn('path ','top path');
   
   this[cbcs] = [];
-  if(arguments.length) this.attach(location,server,path,log);
+  if(arguments.length) this.attach(server,opt);
 };
 
 Wapp.prototype = new Emitter.Target();
@@ -91,20 +93,18 @@ Object.defineProperties(Wapp.prototype,{
     while(cbc = this[cbcs].shift()) cbc.detach();
   }},
   
-  attach: {value: function(location,server,path,log){
+  attach: {value: function(server,opt){
     var hsm = new Hsm(server),
+        location,path,log,
         folders,conf,i,j,keys;
     
-    if(typeof location != 'string'){
-      path = server;
-      server = location;
-      location = '';
-    }
+    opt = opt || {};
+    path = opt.path || '';
+    log = opt.fileLogger;
     
-    conf = getConf(location);
-    
-    path = path || '';
+    conf = getConf(opt.client);
     folders = conf.folders;
+    location = conf.baseDir;
     
     keys = Object.keys(folders);
     for(j = 0;j < keys.length;j++){
