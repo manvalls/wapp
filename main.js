@@ -25,6 +25,7 @@ var Emitter = require('y-emitter'),
     byJson = '4qTpdL-kUvC6',
     
     template = fs.readFileSync(p.resolve(__dirname,'template.html')).toString(),
+    shimedArgs = {cache:{}, packageCache: {}},
     args = {cache:{}, packageCache: {}},
     
     getConf,build,watch,lock,
@@ -34,6 +35,7 @@ if(process.env.NODE_PATH) args.paths = process.env.NODE_PATH.split(':');
 else args.paths = [];
 
 args.paths.push(__dirname + '/node_modules');
+shimedArgs.paths = args.paths;
 
 // Wapp Object
 
@@ -207,10 +209,10 @@ build = wrap(function*(file,folder,name,log,w){
       watchify = require('watchify');
       
       b = browserify(args);
-      b.es5 = browserify(args);
+      b.es5 = browserify(shimedArgs);
     }else{
       b = browserify(args);
-      b.es5 = browserify(args);
+      b.es5 = browserify(shimedArgs);
     }
     
     b.add(file);
