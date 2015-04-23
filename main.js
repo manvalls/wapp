@@ -367,16 +367,18 @@ function* onRequest(e,c,wapp,folders,path){
   }
   
   if(answer.code != 200){
+    headers = answer.headers || {};
     answer.title = answer.code + '';
     answer.summary = http.STATUS_CODES[answer.code];
-  }
+  }else headers = {};
   
-  headers = answer.headers || {};
+  code = answer.code;
+  gzlvl = answer.gzip;
+  
+  answer.title = (answer.title || '') + '';
+  answer.data = (answer.data || '') + '';
   
   if(byJson in query){
-    
-    code = answer.code;
-    gzlvl = answer.gzlvl;
     
     try{
       
@@ -399,18 +401,22 @@ function* onRequest(e,c,wapp,folders,path){
     
     try{ answer.data = JSON.stringify(answer.data); }
     catch(e){
-      answer.title = (answer.code = 500) + '';
+      answer.title = (code = 500) + '';
       answer.summary = 'Couldn\'t stringify JSON data';
+      delete answer.data;
     }
-    
-    code = answer.code;
-    gzlvl = answer.gzip;
     
     data = new Buffer(template.replace(/{{(\w*)}}/g,function(m,s1){
       return answer[s1];
     }));
     
     headers['Content-Type'] = 'text/html;charset=utf-8';
+    
+    if(!answer.allowFraming) headers['X-Frame-Options'] = 'DENY';
+    else if(answer.allowFraming !== true){
+      if(answer.allowFraming == 'self') headers['X-Frame-Options'] = 'SAMEORIGIN';
+      else headers['X-Frame-Options'] = 'ALLOW-FROM ' + answer.allowFraming;
+    }
     
   }
   
@@ -514,16 +520,11 @@ function Request(pathname,p,headers,e,query,addr){
 
 Object.defineProperties(Request.prototype,{
   
-  answer: {value: function(title,summary,data,gzip){
+  answer: {value: function(opt){
+    opt = opt || {};
+    opt.code = 200;
     
-    this[resolver].accept({
-      title: title,
-      summary: summary,
-      data: data,
-      gzip: gzip,
-      code: 200
-    });
-    
+    this[resolver].accept(opt);
   }},
   
   sendCode: {value: function(code,headers){
