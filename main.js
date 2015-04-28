@@ -248,8 +248,7 @@ build = wrap(function*(file,folder,name,log,w){
     
     if(log){
       console.log('\u001b[91m✗\u001b[0m');
-      try{ console.log('\n' + e.errors[1].stack.match(/SyntaxError:\s((.|\n)*?)\n\s*at/)[1] + '\n'); }
-      catch(e2){ console.log('\n' + e.message + '\n'); }
+      console.log('\n' + e.message + '\n');
     }
     
   }
