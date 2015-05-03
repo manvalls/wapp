@@ -25,7 +25,7 @@ summary.remove();
 summary = summary.innerHTML;
 
 wapp = module.exports = emitter.target;
-emitter.set('busy');
+emitter.set('ready');
 emitter.syn('rsc ','top rsc');
 emitter.syn('path ','top path');
 
@@ -127,19 +127,21 @@ function onPopState(e){
   k = (k + 1)%1e15;
   
   if(e.state && e.state[fromWapp]){
+    
     event = new Event(e.state);
-    current = wapp.current = event;
+    wapp.current = event;
     
     en = 'rsc ' + event.rsc;
     if(wapp.listeners(en)) emitter.give(en,event);
     else event.next();
     
   }else wapp.goTo(location.href.slice(prefix.length),{replaceState: true});
+  
 }
 
 if(global.history) window.addEventListener('popstate',onPopState);
 
-wapp.walk(function*(){
+(function(){
   var obj = {
         title: title,
         summary: summary,
@@ -160,22 +162,16 @@ wapp.walk(function*(){
   
   if(global.history) history.replaceState(obj,obj.title,location.href);
   
-  yield start;
-  if(pk != k) return;
-  
-  emitter.unset('busy');
-  emitter.set('ready');
-  
-  onPopState({state: obj});
-});
+})();
 
-wapp.start = function(){
-  start.accept();
+wapp.handleCurrent = function(){
+  onPopState({state: wapp.current});
 };
 
 // Event
 
 function Event(data){
+  
   this.rsc = data.rsc;
   this.title = data.title;
   this.summary = data.summary;
@@ -187,6 +183,8 @@ function Event(data){
   
   this.parts = [];
   this[path] = this.rsc.split('/');
+  this[fromWapp] = true;
+  
 }
 
 Object.defineProperties(Event.prototype,{
