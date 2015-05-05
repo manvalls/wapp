@@ -21,6 +21,8 @@ var Emitter = require('y-emitter'),
     cbcs = Su(),
     e404 = Su(),
     
+    active = Su(),
+    
     path = Su(),
     byJson = '4qTpdL-kUvC6',
     
@@ -28,7 +30,8 @@ var Emitter = require('y-emitter'),
     shimedArgs = {cache:{}, packageCache: {}},
     args = {cache:{}, packageCache: {}},
     
-    getConf,build,watch,lock,
+    getConf,build,watch,createFolder,lock,
+    dblWrite,
     Wapp;
 
 if(process.env.NODE_PATH) args.paths = process.env.NODE_PATH.split(':');
@@ -55,7 +58,7 @@ getConf = function(opt){
   if(typeof opt == 'string'){
     conf.baseDir = opt;
     
-    try{ opt = require(p.resolve(location,'client')); }
+    try{ opt = require(p.resolve(opt,'client')); }
     catch(e){ opt = {}; }
   }
   
@@ -95,10 +98,10 @@ Object.defineProperties(Wapp.prototype,{
     while(cbc = this[cbcs].shift()) cbc.detach();
   }},
   
-  attach: {value: function(server,opt){
+  attach: {value: wrap(function*(server,opt){
     var hsm = new Hsm(server),
         location,path,log,
-        folders,conf,i,j,keys;
+        folders,conf,i,j,keys,sdata;
     
     opt = opt || {};
     path = opt.path || '';
@@ -107,6 +110,9 @@ Object.defineProperties(Wapp.prototype,{
     conf = getConf(opt.client);
     folders = conf.folders;
     location = conf.baseDir;
+    
+    if(opt.cache !== false) yield Wapp.cache(opt.client,path,false);
+    else sdata = conf.data
     
     keys = Object.keys(folders);
     for(j = 0;j < keys.length;j++){
@@ -117,16 +123,65 @@ Object.defineProperties(Wapp.prototype,{
     }
     
     this[cbcs].push(
-      hsm.on(path,onRequest,this[emitter],folders,path)
+      hsm.on(path,onRequest,this[emitter],folders,path,sdata,conf.mime)
     );
     
-  }}
+  })}
   
 });
 
 // Build
 
 Wapp.lock = lock = new Lock();
+
+// - Utils
+
+dblWrite = wrap(function*(file,data){
+  var gz,cb;
+  
+  fs.writeFile(file,data,cb = new Cb());
+  yield cb;
+  
+  gz = zlib.createGzip({level: 9});
+  gz.write(data);
+  gz.end();
+  
+  yield gz.pipe(fs.createWriteStream(file + '.gz'))[until]('finish');
+  
+});
+
+function fillTemplate(data,path){
+  var nd = {},
+      result = {};
+  
+  nd.path = path;
+  
+  try{ nd.data = JSON.stringify(data.data); }
+  catch(e){
+    nd.title = (result.code = 500) + '';
+    nd.summary = 'Couldn\'t stringify JSON data';
+    nd.data = '"error"';
+  }
+  
+  result.data = new Buffer(template.replace(/{{(\w*)}}/g,function(m,s1){
+    return s1 in nd ? nd[s1] : data[s1];
+  }));
+  
+  return result;
+}
+
+createFolder = wrap(function*(folder){
+  var cb;
+  
+  try{
+    fs.stat(folder,cb = Cb());
+    assert((yield cb).isDirectory());
+  }catch(e){
+    fs.mkdir(folder,cb = Cb());
+    yield cb;
+  }
+  
+});
 
 function complete(n){
   return (n >= 10 ? '' : '0') + n;
@@ -256,57 +311,196 @@ build = wrap(function*(file,folder,name,log,w){
   return w;
 });
 
-watch = wrap(function*(file,folder,name,log){
+watch = wrap(function*(file,folder,name,log,builder){
   var w,uu;
   
   yield lock.take();
-  w = yield build(file,folder,name,log,true);
+  if(builder[active]) try{ w = yield build(file,folder,name,log,true); }catch(e){}
   lock.give();
   
-  uu = w[until]('update');
-  while(true){
+  if(w) uu = w[until]('update');
+  
+  if(builder[active]) do{
+    
     yield uu;
     uu = w[until]('update');
     
     yield lock.take();
-    yield build(file,folder,name,log,w);
+    if(builder[active]) try{ yield build(file,folder,name,log,w); }catch(e){}
     lock.give();
-  }
+    
+  }while(builder[active]);
   
 });
+
+// - Exports
 
 Wapp.build = wrap(function*(location,keepOn,log){
   var conf = getConf(location),
       folders = conf.folders,
       scripts = conf.scripts,
       
+      builder = new Builder(),
+      
       keys,i,cb,folder,file;
   
   if(log == null) log = true;
+  yield createFolder(folders.build);
   
-  try{
-    fs.stat(folders.build,cb = Cb());
-    assert((yield cb).isDirectory());
-  }catch(e){
-    fs.mkdir(folders.build,cb = Cb());
-    yield cb;
+  folder = folders.build;
+  keys = Object.keys(scripts);
+  
+  if(keepOn){
+    
+    for(i = 0;i < keys.length;i++){
+      file = scripts[keys[i]];
+      watch(file,folder,keys[i],log,builder);
+    }
+    
+  }else for(i = 0;i < keys.length;i++){
+    
+    file = scripts[keys[i]];
+    
+    yield lock.take();
+    try{ yield build(file,folder,keys[i],log); }catch(e){ }
+    lock.give();
+    
   }
   
-  folder = p.resolve(location,folders.build);
-  if(keepOn) lock = new Lock();
+  return builder;
+});
+
+Wapp.cache = wrap(function*(location,path,log){
+  var conf = getConf(location),
+      
+      i,j,keys,dir,result,d;
   
-  keys = Object.keys(scripts);
-  for(i = 0;i < keys.length;i++){
-    file = p.resolve(location,scripts[keys[i]]);
-    if(keepOn) watch(file,folder,keys[i],log,lock);
-    else{
-      yield lock.take();
-      yield build(file,folder,keys[i],log);
-      lock.give();
+  if(!conf.data) return;
+  if(log == null) log = true;
+  path = path || '';
+  
+  dir = p.resolve(conf.folders.build,encodeURIComponent(path) + '_data');
+  
+  yield createFolder(conf.folders.build);
+  yield createFolder(dir);
+  
+  keys = Object.keys(conf.data);
+  for(j = 0;j < keys.length;j++){
+    i = keys[j];
+    
+    yield lock.take();
+    
+    if(log){
+      d = new Date();
+      process.stdout.write(
+      complete(d.getHours()) + 
+      ':' + 
+      complete(d.getMinutes()) + 
+      ' - Caching \u001b[3m' + i + '\u001b[0m... ');
     }
+    
+    try{
+      
+      result = fillTemplate(conf.data[i],path);
+      if(result.code) throw new Error();
+      
+      yield dblWrite(p.resolve(dir,i + '.html'),result.data);
+      yield dblWrite(p.resolve(dir,i + '.json'),JSON.stringify(conf.data[i]));
+      
+      if(log) console.log('\u001b[92m✓\u001b[0m');
+      
+    }catch(e){
+      
+      if(log){
+        console.log('\u001b[91m✗\u001b[0m');
+        console.log('\n' + e.message + '\n');
+      }
+      
+    }
+    
+    lock.give();
   }
   
 });
+
+Wapp.clear = wrap(function*(location,what){
+  var cache,build,cb,f1,f2,i,j,stats,path,file;
+  
+  switch(what){
+    
+    case 'cache':
+      cache = true;
+      break;
+    
+    case 'build':
+      build = true;
+      break;
+    
+    default:
+      cache = true;
+      build = true;
+      break;
+      
+  }
+  
+  location = getConf(location).folders.build;
+  
+  try{
+    fs.readdir(location,cb = Cb());
+    f1 = yield cb;
+  }catch(e){ return; }
+  
+  for(i = 0;i < f1.length;i++){
+    path = p.resolve(location,f1[i]);
+    
+    fs.stat(path,cb = Cb());
+    stats = yield cb;
+    
+    if(stats.isDirectory()){
+      
+      if(cache){
+        
+        fs.readdir(path,cb = Cb());
+        f2 = yield cb;
+        
+        for(j = 0;j < f2.length;j++){
+          file = p.resolve(path,f2[j]);
+          
+          fs.stat(file,cb = Cb());
+          stats = yield cb;
+          
+          if(!stats.isDirectory()){
+            fs.unlink(file,cb = Cb());
+            yield cb;
+          }
+        }
+        
+        fs.rmdir(path,cb = Cb());
+        try{ yield cb; }catch(e){}
+        
+      }
+      
+    }else if(build){
+      fs.unlink(path,cb = Cb());
+      yield cb;
+    }
+    
+  }
+  
+  fs.rmdir(location,cb = Cb());
+  try{ yield cb; }catch(e){}
+  
+});
+
+// - Builder
+
+function Builder(){
+  this[active] = true;
+}
+
+Object.defineProperty(Builder.prototype,'cancel',{value: function(){
+  this[active] = false;
+}});
 
 // Web Server
 
@@ -323,10 +517,10 @@ function* onFile(e,c,location,mime,log){
   
 }
 
-function* onRequest(e,c,wapp,folders,path){
+function* onRequest(e,c,wapp,folders,path,sdata,mime){
   var req,res,u,data,gzip,pathname,
       code,gzlvl,query,headers,
-      request,answer,en;
+      request,answer,en,result,file;
   
   req = e.request;
   res = e.response;
@@ -354,6 +548,25 @@ function* onRequest(e,c,wapp,folders,path){
       else request.next();
       
       answer = yield request[resolver].yielded;
+      
+      if(typeof answer == 'string'){
+        
+        try{
+          
+          if(byJson in query) file = answer + '.json';
+          else file = answer + '.html';
+          
+          return yield e.sendFile(p.resolve(folders.build,encodeURIComponent(path) + '_data',file),mime);
+          
+        }catch(e){
+          
+          if(sdata) answer = sdata[answer] || {code: 404};
+          else answer = {code: 404};
+          answer.code = answer.code || 200;
+          
+        }
+        
+      }
     }
   }
   
@@ -396,18 +609,9 @@ function* onRequest(e,c,wapp,folders,path){
     
   }else{
     
-    answer.path = path;
-    
-    try{ answer.data = JSON.stringify(answer.data); }
-    catch(e){
-      answer.title = (code = 500) + '';
-      answer.summary = 'Couldn\'t stringify JSON data';
-      delete answer.data;
-    }
-    
-    data = new Buffer(template.replace(/{{(\w*)}}/g,function(m,s1){
-      return answer[s1];
-    }));
+    result = fillTemplate(answer,path);
+    code = result.code || code;
+    data = result.data;
     
     headers['Content-Type'] = 'text/html;charset=utf-8';
     
@@ -520,6 +724,8 @@ function Request(pathname,p,headers,e,query,addr){
 Object.defineProperties(Request.prototype,{
   
   answer: {value: function(opt){
+    if(typeof opt == 'string') return this[resolver].accept(opt);
+    
     opt = opt || {};
     opt.code = 200;
     
