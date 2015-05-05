@@ -1,6 +1,6 @@
 {
   "name": "wapp",
-  "version": "10.0.0",
+  "version": "10.1.0",
   "description": "SPA framework",
   "main": "main.js",
   "bin": "./bin/runner.sh",
