@@ -155,10 +155,11 @@ function fillTemplate(data,path){
       result = {};
   
   nd.path = path;
+  nd.code = data.code || 200;
   
   try{ nd.data = JSON.stringify(data.data); }
   catch(e){
-    nd.title = (result.code = 500) + '';
+    nd.title = (result.code = nd.code = 500) + '';
     nd.summary = 'Couldn\'t stringify JSON data';
     nd.data = '"error"';
   }
