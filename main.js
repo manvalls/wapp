@@ -100,6 +100,7 @@ Object.defineProperties(Wapp.prototype,{
   
   attach: {value: wrap(function*(server,opt){
     var hsm = new Hsm(server),
+        mime = {html: {}},
         location,path,log,
         folders,conf,i,j,keys,sdata;
     
@@ -111,6 +112,25 @@ Object.defineProperties(Wapp.prototype,{
     folders = conf.folders;
     location = conf.baseDir;
     
+    mime[apply](conf.mime);
+    
+    if('framing' in opt){
+      
+      if(opt.framing === false){
+        mime.html['X-Frame-Options'] = 'DENY';
+        mime.html['Content-Security-Policy'] = "frame-ancestors 'none'";
+      }else if(opt.framing !== true){
+        mime.html['X-Frame-Options'] = 'ALLOW-FROM ' + opt.framing;
+        mime.html['Content-Security-Policy'] = 'frame-ancestors ' + opt.framing;
+      }
+      
+    }else{
+      
+      mime.html['X-Frame-Options'] = 'SAMEORIGIN';
+      mime.html['Content-Security-Policy'] = "frame-ancestors 'self'";
+      
+    }
+    
     if(opt.cache !== false) yield Wapp.cache(opt.client,path,false);
     else sdata = conf.data
     
@@ -118,12 +138,12 @@ Object.defineProperties(Wapp.prototype,{
     for(j = 0;j < keys.length;j++){
       i = keys[j];
       this[cbcs].push(
-        hsm.on(path + '/.' + i,onFile,folders[i],conf.mime,log)
+        hsm.on(path + '/.' + i,onFile,folders[i],mime,log)
       );
     }
     
     this[cbcs].push(
-      hsm.on(path,onRequest,this[emitter],folders,path,sdata,conf.mime)
+      hsm.on(path,onRequest,this[emitter],folders,path,sdata,mime)
     );
     
   })}
@@ -643,6 +663,7 @@ function* onRequest(e,c,wapp,folders,path,sdata,mime){
     }
     
     headers['Content-Type'] = 'application/json;charset=utf-8';
+    if(mime.json) headers[apply](mime.json);
     
   }else{
     
@@ -651,12 +672,7 @@ function* onRequest(e,c,wapp,folders,path,sdata,mime){
     data = result.data;
     
     headers['Content-Type'] = 'text/html;charset=utf-8';
-    
-    if(!answer.allowFraming) headers['X-Frame-Options'] = 'DENY';
-    else if(answer.allowFraming !== true){
-      if(answer.allowFraming == 'self') headers['X-Frame-Options'] = 'SAMEORIGIN';
-      else headers['X-Frame-Options'] = 'ALLOW-FROM ' + answer.allowFraming;
-    }
+    if(mime.html) headers[apply](mime.html);
     
   }
   
