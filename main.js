@@ -31,7 +31,7 @@ var Emitter = require('y-emitter'),
     args = {cache:{}, packageCache: {}},
     
     getConf,build,watch,createFolder,lock,
-    dblWrite,
+    dblWrite,cache,
     Wapp;
 
 if(process.env.NODE_PATH) args.paths = process.env.NODE_PATH.split(':');
@@ -334,6 +334,46 @@ watch = wrap(function*(file,folder,name,log,builder){
   
 });
 
+cache = wrap(function*(dir,name,data,log,path){
+  var d,result;
+  
+  yield lock.take();
+  
+  if(log){
+    d = new Date();
+    process.stdout.write(
+    complete(d.getHours()) + 
+    ':' + 
+    complete(d.getMinutes()) + 
+    ' - Caching \u001b[3m' + name + '\u001b[0m... ');
+  }
+  
+  try{
+    
+    result = fillTemplate(data,path);
+    if(result.code) throw new Error();
+    
+    yield dblWrite(p.resolve(dir,name + '.html'),result.data);
+    yield dblWrite(p.resolve(dir,name + '.json'),JSON.stringify({
+      title: data.title,
+      summary: data.summary,
+      data: data.data
+    }) + '\n');
+    
+    if(log) console.log('\u001b[92m✓\u001b[0m');
+    
+  }catch(e){
+    
+    if(log){
+      console.log('\u001b[91m✗\u001b[0m');
+      console.log('\n' + e.message + '\n');
+    }
+    
+  }
+  
+  lock.give();
+});
+
 // - Exports
 
 Wapp.build = wrap(function*(location,keepOn,log){
@@ -374,7 +414,7 @@ Wapp.build = wrap(function*(location,keepOn,log){
 Wapp.cache = wrap(function*(location,path,log){
   var conf = getConf(location),
       
-      i,j,keys,dir,result,d;
+      i,j,keys,dir;
   
   if(!conf.data) return;
   if(log == null) log = true;
@@ -388,39 +428,23 @@ Wapp.cache = wrap(function*(location,path,log){
   keys = Object.keys(conf.data);
   for(j = 0;j < keys.length;j++){
     i = keys[j];
-    
-    yield lock.take();
-    
-    if(log){
-      d = new Date();
-      process.stdout.write(
-      complete(d.getHours()) + 
-      ':' + 
-      complete(d.getMinutes()) + 
-      ' - Caching \u001b[3m' + i + '\u001b[0m... ');
-    }
-    
-    try{
-      
-      result = fillTemplate(conf.data[i],path);
-      if(result.code) throw new Error();
-      
-      yield dblWrite(p.resolve(dir,i + '.html'),result.data);
-      yield dblWrite(p.resolve(dir,i + '.json'),JSON.stringify(conf.data[i]));
-      
-      if(log) console.log('\u001b[92m✓\u001b[0m');
-      
-    }catch(e){
-      
-      if(log){
-        console.log('\u001b[91m✗\u001b[0m');
-        console.log('\n' + e.message + '\n');
-      }
-      
-    }
-    
-    lock.give();
+    yield cache(dir,i,conf.data[i],log,path);
   }
+  
+  dir = p.resolve(conf.folders.build,encodeURIComponent(path) + '_errors');
+  yield createFolder(dir);
+  
+  yield cache(dir,'404',{
+    code: 404,
+    title: '404',
+    summary: http.STATUS_CODES[404]
+  },log,path);
+  
+  yield cache(dir,'500',{
+    code: 500,
+    title: '500',
+    summary: 'Couldn\'t stringify JSON data'
+  },log,path);
   
 });
 
@@ -580,9 +604,21 @@ function* onRequest(e,c,wapp,folders,path,sdata,mime){
   }
   
   if(answer.code != 200){
-    headers = answer.headers || {};
-    answer.title = answer.code + '';
-    answer.summary = http.STATUS_CODES[answer.code];
+    
+    try{
+          
+      if(byJson in query) file = answer.code + '.json';
+      else file = answer.code + '.html';
+      
+      return yield e.sendFile(p.resolve(folders.build,encodeURIComponent(path) + '_errors',file),answer.code,mime);
+      
+    }catch(e){
+      
+      headers = answer.headers || {};
+      answer.title = answer.code + '';
+      answer.summary = http.STATUS_CODES[answer.code];
+    }
+    
   }else headers = {};
   
   code = answer.code;
