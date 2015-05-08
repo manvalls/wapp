@@ -562,7 +562,7 @@ Object.defineProperty(Builder.prototype,'cancel',{value: function(){
 function* onFile(e,c,location,mime,log){
   
   try{
-    yield e.sendFile(p.resolve(location,e.parts.join('/')),mime);
+    yield e.sendFile(p.resolve(location,e.parts.join('/')),{mime: mime});
     if(log) log(null,e,location);
   }catch(error){
     if(log) log(error,e,location);
@@ -611,7 +611,7 @@ function* onRequest(e,c,wapp,folders,path,sdata,mime){
           if(byJson in query) file = answer + '.json';
           else file = answer + '.html';
           
-          return yield e.sendFile(p.resolve(folders.build,encodeURIComponent(path) + '_data',file),mime);
+          return yield e.sendFile(p.resolve(folders.build,encodeURIComponent(path) + '_data',file),{mime: mime});
           
         }catch(e){
           
@@ -640,7 +640,7 @@ function* onRequest(e,c,wapp,folders,path,sdata,mime){
       if(byJson in query) file = answer.code + '.json';
       else file = answer.code + '.html';
       
-      return yield e.sendFile(p.resolve(folders.build,encodeURIComponent(path) + '_errors',file),answer.code,mime);
+      return yield e.sendFile(p.resolve(folders.build,encodeURIComponent(path) + '_errors',file),{ code: answer.code, mime: mime });
       
     }catch(e){
       
