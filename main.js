@@ -22,6 +22,7 @@ var Emitter = require('y-emitter'),
     e404 = Su(),
     
     active = Su(),
+    lang = Su(),
     
     path = Su(),
     byJson = '4qTpdL-kUvC6',
@@ -606,6 +607,7 @@ function* onRequest(e,c,wapp,folders,path,sdata,mime){
   
   req = e.request;
   res = e.response;
+  headers = {};
   u = e.url;
   
   pathname = e.parts.join('/');
@@ -631,6 +633,7 @@ function* onRequest(e,c,wapp,folders,path,sdata,mime){
     else request.next();
     
     answer = yield request[resolver].yielded;
+    if(answer[lang]) headers['Content-Language'] = answer[lang];
     
     if(typeof answer == 'string'){
       
@@ -639,7 +642,7 @@ function* onRequest(e,c,wapp,folders,path,sdata,mime){
         if(byJson in query) file = answer + '.json';
         else file = answer + '.html';
         
-        return yield e.sendFile(p.resolve(folders.build,encodeURIComponent(path) + '_data',file),{mime: mime});
+        return yield e.sendFile(p.resolve(folders.build,encodeURIComponent(path) + '_data',file),{mime: mime, headers: headers});
         
       }catch(e){
         
@@ -668,16 +671,21 @@ function* onRequest(e,c,wapp,folders,path,sdata,mime){
       if(byJson in query) file = answer.code + '.json';
       else file = answer.code + '.html';
       
-      return yield e.sendFile(p.resolve(folders.build,encodeURIComponent(path) + '_errors',file),{ code: answer.code, mime: mime });
+      return yield e.sendFile(p.resolve(folders.build,encodeURIComponent(path) + '_errors',file),{
+        code: answer.code,
+        mime: mime,
+        headers: headers
+      });
       
     }catch(e){
       
-      headers = answer.headers || {};
+      if(answer.headers) headers[apply](answer.headers);
       answer.title = answer.code + '';
       answer.summary = http.STATUS_CODES[answer.code];
+      
     }
     
-  }else headers = {};
+  }
   
   code = answer.code;
   gzlvl = answer.gzip;
@@ -700,7 +708,7 @@ function* onRequest(e,c,wapp,folders,path,sdata,mime){
       code = 500;
     }
     
-    headers['Content-Type'] = 'application/json;charset=utf-8';
+    headers['Content-Type'] = 'application/json';
     if(mime.json) headers[apply](mime.json);
     
   }else{
@@ -815,7 +823,9 @@ function Request(pathname,p,headers,e,query,addr){
 
 Object.defineProperties(Request.prototype,{
   
-  answer: {value: function(opt){
+  answer: {value: function(opt,l){
+    this[lang] = l;
+    
     if(typeof opt == 'string') return this[resolver].accept(opt);
     
     opt = opt || {};
