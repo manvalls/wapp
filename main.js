@@ -559,14 +559,41 @@ Object.defineProperty(Builder.prototype,'cancel',{value: function(){
 
 // Web Server
 
+function notAcceptable(e,pathname){
+  
+  if(e.request.method != 'GET' && e.request.method != 'HEAD'){
+    
+    return {
+      code: 405,
+      headers: {'Allow': 'GET, HEAD'}
+    };
+    
+  }
+  
+  if(pathname[0] == '.') return true;
+  if(pathname.indexOf('/.') != -1) return true;
+  return false;
+}
+
 function* onFile(e,c,location,mime,log){
+  var pathname = e.parts.join('/'),
+      na = notAcceptable(e,pathname);
+  
+  switch(na){
+    case true: return;
+    case false: break;
+    default:
+      e[e404] = na;
+      e.next();
+      return;
+  }
   
   try{
-    yield e.sendFile(p.resolve(location,e.parts.join('/')),{mime: mime});
+    yield e.sendFile(p.resolve(location,pathname),{mime: mime});
     if(log) log(null,e,location);
   }catch(error){
     if(log) log(error,e,location);
-    e[e404] = error;
+    e[e404] = {code: 404};
     e.next();
   }
   
@@ -574,7 +601,7 @@ function* onFile(e,c,location,mime,log){
 
 function* onRequest(e,c,wapp,folders,path,sdata,mime){
   var req,res,u,data,gzip,pathname,
-      code,gzlvl,query,headers,
+      code,gzlvl,query,headers,na,
       request,answer,en,result,file;
   
   req = e.request;
@@ -584,45 +611,46 @@ function* onRequest(e,c,wapp,folders,path,sdata,mime){
   pathname = e.parts.join('/');
   query = u.query;
   
-  if(e[e404]) answer = {code: 404};
+  if(e[e404]) answer = e[e404];
   else{
-    if(pathname[0] == '.') return;
-    if(pathname.indexOf('/.') != -1) return;
-    if(!req.method.match(/^(GET|HEAD)$/)){
+    
+    na = notAcceptable(e,pathname);
+    switch(na){
+      case true: return;
+      case false: break;
+      default: answer = na;
+    }
+    
+  }
+  
+  if(!answer){
+    request = new Request(pathname,e.parts,req.headers,wapp,query,req.connection.remoteAddress);
+    
+    en = 'rsc ' + pathname;
+    if(wapp.target.listeners(en)) wapp.give(en,request);
+    else request.next();
+    
+    answer = yield request[resolver].yielded;
+    
+    if(typeof answer == 'string'){
       
-      answer = {
-        code: 405,
-        headers: {'Allow': 'GET, HEAD'}
-      };
-      
-    }else{
-      request = new Request(pathname,e.parts,req.headers,wapp,query,req.connection.remoteAddress);
-      
-      en = 'rsc ' + pathname;
-      if(wapp.target.listeners(en)) wapp.give(en,request);
-      else request.next();
-      
-      answer = yield request[resolver].yielded;
-      
-      if(typeof answer == 'string'){
+      try{
         
-        try{
-          
-          if(byJson in query) file = answer + '.json';
-          else file = answer + '.html';
-          
-          return yield e.sendFile(p.resolve(folders.build,encodeURIComponent(path) + '_data',file),{mime: mime});
-          
-        }catch(e){
-          
-          if(sdata) answer = sdata[answer] || {code: 404};
-          else answer = {code: 404};
-          answer.code = answer.code || 200;
-          
-        }
+        if(byJson in query) file = answer + '.json';
+        else file = answer + '.html';
+        
+        return yield e.sendFile(p.resolve(folders.build,encodeURIComponent(path) + '_data',file),{mime: mime});
+        
+      }catch(e){
+        
+        if(sdata) answer = sdata[answer] || {code: 404};
+        else answer = {code: 404};
+        answer.code = answer.code || 200;
         
       }
+      
     }
+    
   }
   
   if(Math.floor(answer.code/100) == 3){
@@ -686,6 +714,7 @@ function* onRequest(e,c,wapp,folders,path,sdata,mime){
     
   }
   
+  headers['Accept-Ranges'] = 'none';
   headers['Last-Modified'] = (new Date()).toUTCString();
   
   gzlvl = typeof gzlvl == 'number' ? gzlvl : wapp.target.gzipLevel;
