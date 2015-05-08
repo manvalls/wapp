@@ -42,6 +42,23 @@ shimedArgs.paths = args.paths;
 
 // Wapp Object
 
+function removeCharFromKeys(obj,base){
+  var i,j,keys,data;
+  
+  keys = Object.keys(obj);
+  for(j = 0;j < keys.length;j++){
+    i = keys[j];
+    
+    data = obj[i];
+    delete obj[i];
+    i = i.replace('/','');
+    
+    if(base) obj[i] = p.resolve(base,data);
+    else obj[i] = data;
+  }
+  
+}
+
 getConf = function(opt){
   var conf = {
         scripts: {main: './main.js'},
@@ -51,7 +68,7 @@ getConf = function(opt){
         },
         mime: {}
       },
-      file,cb,keys,i;
+      file,cb,keys,j,i,data;
   
   opt = opt || '';
   
@@ -65,15 +82,9 @@ getConf = function(opt){
   conf[apply](opt);
   conf.baseDir = p.resolve(conf.baseDir);
   
-  keys = Object.keys(conf.folders);
-  for(i = 0;i < keys.length;i++){
-    conf.folders[keys[i]] = p.resolve(conf.baseDir,conf.folders[keys[i]]);
-  }
-  
-  keys = Object.keys(conf.scripts);
-  for(i = 0;i < keys.length;i++){
-    conf.scripts[keys[i]] = p.resolve(conf.baseDir,conf.scripts[keys[i]]);
-  }
+  removeCharFromKeys(conf.folders,conf.baseDir);
+  removeCharFromKeys(conf.scripts,conf.baseDir);
+  if(conf.data) removeCharFromKeys(conf.data);
   
   return conf;
 };
@@ -94,7 +105,6 @@ Object.defineProperties(Wapp.prototype,{
   
   detach: {value: function(){
     var cbc;
-    
     while(cbc = this[cbcs].shift()) cbc.detach();
   }},
   
