@@ -633,7 +633,7 @@ function* onRequest(e,c,wapp,folders,path,sdata,mime){
     else request.next();
     
     answer = yield request[resolver].yielded;
-    if(answer[lang]) headers['Content-Language'] = answer[lang];
+    if(request[lang]) headers['Content-Language'] = request[lang];
     
     if(typeof answer == 'string'){
       
