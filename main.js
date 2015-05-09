@@ -114,14 +114,13 @@ Object.defineProperties(Wapp.prototype,{
   }},
   
   attach: {value: wrap(function*(server,opt){
-    var hsm = new Hsm(server),
+    var hsm = new Hsm(server,(opt = opt || {}).host),
         mime = {html: {}},
         location,path,log,
         folders,conf,i,j,keys,sdata;
     
     this.detach();
     
-    opt = opt || {};
     path = opt.path || '';
     log = opt.fileLogger;
     
