@@ -55,7 +55,11 @@ function removeCharFromKeys(obj,base){
     i = i.replace('/','');
     
     if(base) obj[i] = p.resolve(base,data);
-    else obj[i] = data;
+    else obj[i] = {
+      title: data.title,
+      summary: data.summary,
+      data: data.data
+    };
   }
   
 }
@@ -114,6 +118,8 @@ Object.defineProperties(Wapp.prototype,{
         mime = {html: {}},
         location,path,log,
         folders,conf,i,j,keys,sdata;
+    
+    this.detach();
     
     opt = opt || {};
     path = opt.path || '';
@@ -385,11 +391,7 @@ cache = wrap(function*(dir,name,data,log,path){
     if(result.code) throw new Error();
     
     yield dblWrite(p.resolve(dir,name + '.html'),result.data);
-    yield dblWrite(p.resolve(dir,name + '.json'),JSON.stringify({
-      title: data.title,
-      summary: data.summary,
-      data: data.data
-    }) + '\n');
+    yield dblWrite(p.resolve(dir,name + '.json'),JSON.stringify(data) + '\n');
     
     if(log) console.log('\u001b[92m✓\u001b[0m');
     
@@ -602,7 +604,7 @@ function* onFile(e,c,location,mime,log){
 
 function* onRequest(e,c,wapp,folders,path,sdata,mime){
   var req,res,u,data,gzip,pathname,
-      code,gzlvl,query,headers,na,
+      code,gzlvl,query,headers,na,i,
       request,answer,en,result,file;
   
   req = e.request;
@@ -635,21 +637,25 @@ function* onRequest(e,c,wapp,folders,path,sdata,mime){
     answer = yield request[resolver].yielded;
     if(request[lang]) headers['Content-Language'] = request[lang];
     
-    if(typeof answer == 'string'){
+    if(typeof answer == 'string') answer = [answer];
+    if(answer instanceof Array){
       
-      try{
+      for(i = 0;i < answer.length;i++) try{
         
-        if(byJson in query) file = answer + '.json';
-        else file = answer + '.html';
+        if(byJson in query) file = answer[i] + '.json';
+        else file = answer[i] + '.html';
         
         return yield e.sendFile(p.resolve(folders.build,encodeURIComponent(path) + '_data',file),{mime: mime, headers: headers});
         
       }catch(e){
         
-        if(sdata) answer = sdata[answer] || {code: 404};
-        else answer = {code: 404};
-        answer.code = answer.code || 200;
+        if(sdata && sdata[answer[i]]){
+          answer = sdata[answer[i]];
+          answer.code = 200;
+          break;
+        }
         
+        if(i == answer.length - 1) answer = {code: 404};
       }
       
     }
