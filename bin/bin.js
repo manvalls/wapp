@@ -1,37 +1,34 @@
 var path = require('path'),
     help = require('u-help'),
     
-    Wapp = require('../main.js'),
-    location = path.resolve(process.cwd(),process.argv[3] || ''),
-    path = process.argv[4] || '',
-    what = path;
+    Wapp = require('../main.js');
 
 switch(process.argv[2]){
   
   case 'clear':
-    Wapp.clear(location,what);
+    Wapp.clear(path.resolve(process.cwd(),process.argv[4] || ''),process.argv[3]);
     break;
   
   case 'cache':
-    Wapp.cache(location,path);
+    Wapp.cache(path.resolve(process.cwd(),process.argv[4] || ''),process.argv[3]);
     break;
   
   case 'build':
-    Wapp.build(location);
+    Wapp.build(path.resolve(process.cwd(),process.argv[3] || ''));
     break;
     
   case 'watch':
-    Wapp.build(location,true);
+    Wapp.build(path.resolve(process.cwd(),process.argv[3] || ''),true);
     break;
     
   default:
     
     help.show('wapp <command> [<client location>]',{
       Commands: {
-        cache: 'Store data cache',
+        "cache [<path>]": 'Store data cache',
         build: 'Build client',
         watch: 'Build client and rebuild when changes occur',
-        "clean (cache|build)": "Clean cache and/or build"
+        "clear (cache|build)": "Clean cache and/or build"
       }
     });
     
