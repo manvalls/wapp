@@ -71,7 +71,11 @@ getConf = function(opt){
           build:      './build',
           files:      './files'
         },
-        mime: {}
+        mime: {},
+        
+        head: '',
+        body: '',
+        viewport: 'initial-scale=1, maximum-scale=1, user-scalable=no'
       },
       file,cb,keys,j,i,data;
   
@@ -159,7 +163,7 @@ Object.defineProperties(Wapp.prototype,{
     }
     
     this[cbcs].push(
-      hsm.on(path,onRequest,this[emitter],folders,path,sdata,mime)
+      hsm.on(path,onRequest,this[emitter],folders,path,sdata,mime,conf)
     );
     
   })}
@@ -186,18 +190,22 @@ dblWrite = wrap(function*(file,data){
   
 });
 
-function fillTemplate(data,path){
+function fillTemplate(data,path,conf){
   var nd = {},
       result = {};
   
   nd.path = path;
   nd.code = data.code || 200;
   
+  nd.viewport = conf.viewport;
+  nd.head = conf.head;
+  nd.body = conf.body;
+  
   try{ nd.data = JSON.stringify(data.data); }
   catch(e){
     nd.title = (result.code = nd.code = 500) + '';
     nd.summary = 'Couldn\'t stringify JSON data';
-    nd.data = '"error"';
+    nd.data = 'undefined';
   }
   
   result.data = new Buffer(template.replace(/{{(\w*)}}/g,function(m,s1){
@@ -370,7 +378,7 @@ watch = wrap(function*(file,folder,name,log,builder){
   
 });
 
-cache = wrap(function*(dir,name,data,log,path){
+cache = wrap(function*(dir,name,data,log,path,conf){
   var d,result;
   
   yield lock.take();
@@ -386,7 +394,7 @@ cache = wrap(function*(dir,name,data,log,path){
   
   try{
     
-    result = fillTemplate(data,path);
+    result = fillTemplate(data,path,conf);
     if(result.code) throw new Error();
     
     yield dblWrite(p.resolve(dir,name + '.html'),result.data);
@@ -460,7 +468,7 @@ Wapp.cache = wrap(function*(location,path,log){
   keys = Object.keys(conf.data);
   for(j = 0;j < keys.length;j++){
     i = keys[j];
-    yield cache(dir,i,conf.data[i],log,path);
+    yield cache(dir,i,conf.data[i],log,path,conf);
   }
   
   dir = p.resolve(conf.folders.build,encodeURIComponent(path) + '_errors');
@@ -470,13 +478,13 @@ Wapp.cache = wrap(function*(location,path,log){
     code: 404,
     title: '404',
     summary: http.STATUS_CODES[404]
-  },log,path);
+  },log,path,conf);
   
   yield cache(dir,'500',{
     code: 500,
     title: '500',
     summary: 'Couldn\'t stringify JSON data'
-  },log,path);
+  },log,path,conf);
   
 });
 
@@ -601,7 +609,7 @@ function* onFile(e,c,location,mime,log){
   
 }
 
-function* onRequest(e,c,wapp,folders,path,sdata,mime){
+function* onRequest(e,c,wapp,folders,path,sdata,mime,conf){
   var req,res,u,data,gzip,pathname,
       code,gzlvl,query,headers,na,i,
       request,answer,en,result,file;
@@ -718,7 +726,7 @@ function* onRequest(e,c,wapp,folders,path,sdata,mime){
     
   }else{
     
-    result = fillTemplate(answer,path);
+    result = fillTemplate(answer,path,conf);
     code = result.code || code;
     data = result.data;
     
