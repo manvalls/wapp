@@ -1,7 +1,7 @@
 var path = require('path'),
     help = require('u-help'),
     
-    Wapp = require('../main.js');
+    Wapp = require('../server.js');
 
 switch(process.argv[2]){
   
