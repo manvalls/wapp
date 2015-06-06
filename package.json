@@ -14,7 +14,7 @@
     "y-resolver": "",
     "y-lock": "",
     "hsm": "",
-    "browserify": "^9",
+    "browserify": "^10",
     "watchify": "^3",
     "babelify": "^6",
     "babel-runtime": "^5"

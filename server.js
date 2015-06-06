@@ -315,14 +315,14 @@ build = wrap(function*(file,folder,name,log,w){
       b.es5 = browserify(shimedArgs);
     }
     
-    b.add(file);
-    
-    b.es5.add(file);
     b.es5.transform(babelify.configure({
       blacklist: ['strict'],
       optional: ['runtime'],
       nonStandard: false
-    }));
+    }),{global: true});
+    
+    b.add(file);
+    b.es5.add(file);
     
     if(w){
       w = watchify(b);
@@ -347,8 +347,14 @@ build = wrap(function*(file,folder,name,log,w){
   }catch(e){
     
     if(log){
-      console.log('\u001b[91m✗\u001b[0m');
-      console.log('\n' + e.message + '\n');
+      console.log('\u001b[91m✗\u001b[0m\n');
+      
+      e = e.errors[1] || e.errors[0];
+      if(e.codeFrame && e.filename){
+        console.log(e.filename);
+        console.log('\n' + e.codeFrame + '\n');
+      }else console.log(e.message + '\n');
+      
     }
     
   }
