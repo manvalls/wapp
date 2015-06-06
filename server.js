@@ -272,6 +272,9 @@ writeShimedBdl = wrap(function*(bdl,file){
   files.sort();
   files.reverse();
   
+  fs.readFile(require.resolve('babel-core/browser-polyfill.js'),cb = Cb());
+  code = (yield cb).toString() + '\n\n\n' + code;
+  
   for(i = 0;i < files.length;i++){
     shim = __dirname + '/shims/' + files[i];
     
@@ -317,7 +320,6 @@ build = wrap(function*(file,folder,name,log,w){
     
     b.es5.transform(babelify.configure({
       blacklist: ['strict'],
-      optional: ['runtime'],
       nonStandard: false
     }),{global: true});
     
