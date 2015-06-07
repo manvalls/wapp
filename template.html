@@ -19,7 +19,7 @@ window['1ZN9cOC3OuKILjF'] = location.origin + '{{path}}/';
   try{
     test = eval('function*(){}');
     test = eval('a => a + 1');
-    test = new Symbol(); typeof test == 'symbol';
+    test = Symbol(); typeof test == 'symbol';
     document.write('<script src=".build/main.js" defer><\/script>');
   }catch(e){
     document.write('<script src=".build/main.es5.js" defer><\/script>');
