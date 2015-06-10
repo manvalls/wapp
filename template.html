@@ -17,13 +17,19 @@ window['1ZN9cOC3OuKILjF'] = location.origin + '{{path}}/';
   document.write('<base href="' + window['1ZN9cOC3OuKILjF'] + '" target="_blank" />');
   
   try{
+    
     test = eval('function*(){}');
     test = eval('a => a + 1');
+    eval('`${location}`');
     test = Symbol(); typeof test == 'symbol';
+    
     document.write('<script src=".build/main.js" defer><\/script>');
+    
   }catch(e){
+    
     document.write('<script src=".build/main.es5.js" defer><\/script>');
     console.warn('You\'re using a shitty browser');
+    
   }
   
 })();
