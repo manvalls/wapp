@@ -22,7 +22,7 @@ var Emitter = require('y-emitter'),
     
     wapp;
 
-sElem.remove();
+if(sElem) sElem.remove();
 
 wapp = module.exports = emitter.target;
 emitter.set('ready');
