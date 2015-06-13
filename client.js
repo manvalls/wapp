@@ -122,14 +122,18 @@ wapp.goTo = wrap(function*(rsc,opt){
 });
 
 function onPopState(e){
-  var event,en;
+  var event,en,old;
   
   k = (k + 1)%1e15;
   
   if(e.state && e.state[fromWapp]){
     
     event = new Event(e.state);
+    
+    old = wapp.current;
     wapp.current = event;
+    
+    emitter.give('change',{new: event, old: old});
     
     en = 'rsc ' + event.rsc;
     if(wapp.listeners(en)) emitter.give(en,event);
