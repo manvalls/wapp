@@ -3,7 +3,8 @@ var Emitter = require('y-emitter'),
     Hybrid = require('y-resolver').Hybrid,
     Su = require('u-su'),
     
-    summary = document.getElementById('2nEI77dDCExbZNo'),
+    sElem = document.getElementById('2nEI77dDCExbZNo'),
+    summary = global['3ZpN50xnziPmRcG'] = global['3ZpN50xnziPmRcG'] || sElem.innerHTML,
     emitter = new Emitter(),
     start = new Hybrid(),
     
@@ -21,8 +22,7 @@ var Emitter = require('y-emitter'),
     
     wapp;
 
-summary.remove();
-summary = summary.innerHTML;
+sElem.remove();
 
 wapp = module.exports = emitter.target;
 emitter.set('ready');
@@ -127,6 +127,10 @@ function onPopState(e){
   k = (k + 1)%1e15;
   
   if(e.state && e.state[fromWapp]){
+    
+    global['3ZpN50xnziPmRcG'] = e.state.summary;
+    global['c3hM9mLiIxK6DYj'] = e.state.code;
+    global['1wqDxiG274aqleT'] = e.state.data;
     
     event = new Event(e.state);
     
