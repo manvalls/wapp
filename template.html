@@ -18,11 +18,17 @@ window['1ZN9cOC3OuKILjF'] = location.origin + '{{path}}/';
   
   try{
     
-    test = eval('function*(){}');
+    test = eval('function* test(){}');
     test = eval('a => a + 1');
     eval('`${location}`');
-    test = Symbol(); typeof test == 'symbol';
+    test = Symbol(); if(typeof test != 'symbol') throw '';
+    test = new Map(); test = new Set(); test = new WeakMap();
+    if(typeof Array.from != 'function') throw '';
     test = 'test';eval('test = {test,foo(){ return "bar"; }}');
+    eval('for(test of []){}');
+    eval('let foo = "bar"');
+    eval('const myConst = 5');
+    eval('class Foo{}');
     
     document.write('<script src=".build/main.js" defer><\/script>');
     
