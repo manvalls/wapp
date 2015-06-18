@@ -643,7 +643,7 @@ function* onRequest(e,c,wapp,folders,path,sdata,mime,conf){
   }
   
   if(!answer){
-    request = new Request(pathname,e.parts,req.headers,wapp,query,req.connection.remoteAddress);
+    request = new Request(pathname,e.parts,req.headers,wapp,query,req.connection.remoteAddress,e.cookies);
     
     en = 'rsc ' + pathname;
     if(wapp.target.listeners(en)) wapp.give(en,request);
@@ -820,7 +820,7 @@ function getLangs(str){
   return Object.freeze(result);
 }
 
-function Request(pathname,p,headers,e,query,addr){
+function Request(pathname,p,headers,e,query,addr,cookies){
   this[resolver] = new Resolver();
   
   if(headers['if-modified-since']) this.date = new Date(headers['if-modified-since']);
@@ -836,6 +836,7 @@ function Request(pathname,p,headers,e,query,addr){
   
   this.rsc = pathname;
   this.query = query;
+  this.cookies = cookies;
   this.parts = [];
   
   this[path] = p;
