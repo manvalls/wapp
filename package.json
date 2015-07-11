@@ -13,7 +13,7 @@
     "u-proto": "",
     "y-resolver": "",
     "y-lock": "",
-    "hsm": "",
+    "hsm": "^4",
     "browserify": "^10",
     "watchify": "^3",
     "babelify": "^6",
