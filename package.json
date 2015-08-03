@@ -5,7 +5,7 @@
   "main": "main.js",
   "bin": "./bin/runner.sh",
   "dependencies": {
-    "y-emitter": "",
+    "y-emitter": "^6",
     "u-su": "",
     "u-help": "",
     "y-walk": "",
