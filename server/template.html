@@ -1,0 +1,69 @@
+
+<!DOCTYPE HTML>
+<html>
+<head>
+<script type="text/javascript">
+
+try{
+(function(){
+  var JSONdata = {{data}},
+      status = parseInt(decodeURIComponent(document.cookie.match(
+        /(?:^|.*;\s*)wapp_status\s*=\s*(.*?)(?:\s*;|$)/
+      )[1])),
+      prefix = decodeURIComponent(document.cookie.match(
+        /(?:^|.*;\s*)wapp_prefix\s*=\s*(.*?)(?:\s*;|$)/
+      )[1]);
+
+  location.origin = location.origin || location.href.match(/\w+:\/\/[^\/]+/)[0];
+
+  document.write(
+    '<base href="' +
+    location.origin +
+    prefix + '/' +
+    '" target="_blank" />'
+  );
+
+  if(window.history) history.replaceState(['wapp_state',status,JSONdata],'',location.href);
+  else wapp_state = ['wapp_state',status,JSONdata];
+
+})();
+}catch(e){ location.reload(true); }
+
+</script>
+</head>
+<body>
+<script type="text/javascript">
+
+(function(){
+var test;
+
+try{
+
+  test = Symbol(); if(typeof test != 'symbol') throw new Error();
+  test = new Map(); test = new Set(); test = new WeakMap();
+  eval('for(test of []){}');
+  test = eval('a => a + 1');
+  test = eval('function* test(){}');
+
+  (function(){
+    "use strict";
+    eval('let foo = "bar"');
+    eval('const myConst = 5');
+  })();
+
+  window.wapp_mode = 'ES6';
+  document.write('<script id="wapp_script_main" src=".scripts/main.js"></s'+'cript>');
+
+}catch(e){
+
+  window.wapp_mode = 'ES5';
+  document.write('<script id="wapp_script_main" src=".scripts/main.es5.js"></s'+'cript>');
+  console.warn('You\'re using a shitty browser');
+
+}
+
+})();
+
+</script>
+</body>
+</html>

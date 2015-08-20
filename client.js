@@ -1,216 +1,269 @@
-var Emitter = require('y-emitter'),
-    wrap = require('y-walk').wrap,
-    Hybrid = require('y-resolver').Hybrid,
-    Su = require('u-su'),
-    
-    sElem = document.getElementById('2nEI77dDCExbZNo'),
-    summary = global['3ZpN50xnziPmRcG'] = global['3ZpN50xnziPmRcG'] || sElem.innerHTML,
-    emitter = new Emitter(),
-    start = new Hybrid(),
-    
-    byJson = '4qTpdL-kUvC6',
-    fromWapp = '4qWfaW-14lt5',
-    
-    code = global['c3hM9mLiIxK6DYj'],
-    data = global['1wqDxiG274aqleT'],
-    prefix = global['1ZN9cOC3OuKILjF'],
-    title = document.title,
-    
-    path = Su(),
-    
+var PathEvent = require('path-event'),
+    updateMax = require('path-event/updateMax'),
+    Emitter = require('y-emitter'),
+    define = require('u-proto/define'),
+    Resolver = require('y-resolver'),
+    pct = require('pct'),
+
+    hash = Symbol(),
+    search = Symbol(),
+    query = Symbol(),
+    pathname = Symbol(),
+    origin = Symbol(),
+    cookies = Symbol(),
+    cookieStr = Symbol(),
+    langMap = Symbol(),
+
+    maximum = Symbol(),
+    resolver = Symbol(),
+    name = Symbol(),
+
     k = 0,
-    
-    wapp;
 
-if(sElem) sElem.remove();
+    wapp,wappEmitter,holder;
 
-wapp = module.exports = emitter.target;
-emitter.set('ready');
-emitter.syn('rsc ','top rsc');
-emitter.syn('path ','top path');
+// wapp
 
-function listener(){
-  if(this.readyState == 4){
-    if(this.status == 0) this.yd.reject(new Error('A network error happened'));
-    else this.yd.accept();
+wappEmitter = new Emitter();
+wapp = wappEmitter.target;
+
+updateMax(wapp,maximum);
+
+wapp[define]({
+
+  goTo: function(loc){
+    handle(loc);
+  },
+
+  trigger: function(){
+    if(global.history) onPopState(history);
+    else onPopState({state: wapp_state});
+  },
+
+  load: function(script){
+    var tag,scr,yd;
+
+    script = (script || '').toLowerCase().replace(/\W/g,'');
+    tag = 'wapp_script_' + script;
+
+    if(global.hasOwnProperty(tag)) return Resolver.accept(global[tag]);
+    if(scr = document.getElementById(tag)) return getYielded(scr,script);
+
+    scr = document.createElement('script');
+    scr.id = script;
+    yd = getYielded(scr,script);
+
+    scr.type = 'text\/javascript';
+    (document.head || document.getElementsByTagName('head')[0]).appendChild(scr);
+
+    if(global.wapp_mode == 'ES5') scr.src = '.scripts/' + script + '.es5.js';
+    else scr.src = '.scripts/' + script + '.js';
+
+    return yd;
   }
-}
 
-function fillWithQuery(obj,path){
-  var m = path.match(/^(.*?)(?:\?(.*?))?(?:#(.*?))?$/);
-  
-  obj.rsc = m[1].replace('%3F','?').replace('%23','#');
-  obj.query = {};
-  obj.fragment = decodeURIComponent(m[3]);
-  
-  if(m[2]){
-    
-    m[2].replace(/([^&]+)(?:\=([^&]*))?/g,function(m,key,value){
-      key = decodeURIComponent(key);
-      value = decodeURIComponent(value || '');
-      
-      obj.query[key] = value;
-    });
-    
-  }
-  
-  return obj;
-}
-
-function fromQuery(query){
-  var keys = Object.keys(query),
-      txt = '',
-      i,j;
-  
-  for(j = 0;j < keys.length;j++){
-    i = keys[j];
-    txt += (txt?'&':'') + encodeURIComponent(i) + (query[i] ? '=' + encodeURIComponent(query[i] + '') : '');
-  }
-  
-  return txt;
-}
-
-wapp.goTo = wrap(function*(rsc,opt){
-  var url,xhr,data,pk,query,queryTxt;
-  
-  emitter.unset('ready');
-  emitter.set('busy');
-  
-  opt = opt || {};
-  query = opt.query || {};
-  queryTxt = fromQuery(query);
-  
-  rsc = rsc.replace('?','%3F').replace('#','%23');
-  url = prefix + rsc + (queryTxt ? '?' + queryTxt : '') + (opt.fragment ? '#' + opt.fragment : '');
-  
-  if(!global.history) return location.href = url;
-  
-  xhr = new XMLHttpRequest();
-  xhr.yd = new Hybrid();
-  xhr.open('GET',url + (queryTxt ? '&' : '?') + byJson,true);
-  xhr.onreadystatechange = listener;
-  xhr.send();
-  
-  k = (k + 1)%1e15;
-  pk = k;
-  
-  try{ yield xhr.yd; }
-  catch(e){
-    location.href = url;
-    throw e;
-  }
-  
-  if(k != pk) return;
-  
-  data = JSON.parse(xhr.responseText);
-  data.code = xhr.status;
-  data.rsc = rsc;
-  data.query = query;
-  data.fragment = opt.fragment;
-  
-  data[fromWapp] = true;
-  
-  if(global.history){
-    if(opt.replaceState) history.replaceState(data,data.title,url);
-    else history.pushState(data,data.title,url);
-  }
-  
-  emitter.unset('busy');
-  emitter.set('ready');
-  
-  onPopState({state: data});
 });
-
-function onPopState(e){
-  var event,en,old;
-  
-  k = (k + 1)%1e15;
-  
-  if(e.state && e.state[fromWapp]){
-    
-    global['3ZpN50xnziPmRcG'] = e.state.summary;
-    global['c3hM9mLiIxK6DYj'] = e.state.code;
-    global['1wqDxiG274aqleT'] = e.state.data;
-    
-    event = new Event(e.state);
-    
-    old = wapp.current;
-    wapp.current = event;
-    
-    emitter.give('change',{new: event, old: old});
-    
-    en = 'rsc ' + event.rsc;
-    if(wapp.listeners(en)) emitter.give(en,event);
-    else event.next();
-    
-  }else wapp.goTo(location.href.slice(prefix.length),{replaceState: true});
-  
-}
-
-if(global.history) window.addEventListener('popstate',onPopState);
-
-(function(){
-  var obj = {
-        title: title,
-        summary: summary,
-        data: data,
-        code: code
-      },
-      pk = k;
-  
-  obj[fromWapp] = true;
-  fillWithQuery(obj,decodeURI(location.href).slice(prefix.length));
-  
-  title = null;
-  summary = null;
-  data = null;
-  code = null;
-  
-  wapp.current = new Event(obj);
-  
-  if(global.history) history.replaceState(obj,obj.title,location.href);
-  
-})();
-
-wapp.handleCurrent = function(){
-  onPopState({state: wapp.current});
-};
 
 // Event
 
-function Event(data){
-  
-  this.rsc = data.rsc;
-  this.title = data.title;
-  this.summary = data.summary;
-  this.data = data.data;
-  this.code = data.code;
-  
-  this.query = data.query;
-  this.fragment = data.fragment;
-  
-  this.parts = [];
-  this[path] = this.rsc.split('/');
-  this[fromWapp] = true;
-  
+function Event(p,max,pn){
+  var langs,i;
+
+  PathEvent.call(this,p,wappEmitter,max);
+
+  this[hash] = pct.decode(location.hash);
+  this[search] = pct.decode(location.search);
+  this[pathname] = pn;
+  this[origin] = pct.decode(location.origin);
+  this[cookieStr] = document.cookie;
+
+  this[langMap] = new Map();
+  langs = navigator.languages || [navigator.language || navigator.userLanguage];
+
+  for(i = 0;i < langs.length;i++) this[langMap].set(langs[i],1);
+  if(!this[langMap].has('*')) this[langMap].set('*',0);
+
 }
 
-Object.defineProperties(Event.prototype,{
-  
-  next: {value: function(){
-    var p = this[path],
-        en;
-    
-    this.parts.unshift(p.pop());
-    while(p.length){
-      en = 'path ' + p.join('/');
-      if(wapp.listeners(en)) return emitter.give(en,this);
-      
-      this.parts.unshift(p.pop());
+Event.prototype = Object.create(PathEvent.prototype);
+Event.prototype[define]({
+
+  constructor: Event,
+
+  get hash(){ return this[hash]; },
+  get search(){ return this[search]; },
+  get query(){ return this[query] = this[query] || getQuery(this[search]); },
+  get pathname(){ return this[pathname]; },
+  get path(){ return this.pathname + this.search; },
+  get href(){ return this.pathname + this.search + this.hash; },
+
+  get origin(){ return this[origin]; },
+  get cookies(){ return this[cookies] = this[cookies] || getCookies(this[cookieStr]); },
+
+  setCookie: function(obj,props){
+    var attrs = '',
+        keys,i,j;
+
+    props = props || {};
+
+    if(props.expires) attrs += ';Expires=' + props.expires.toGMTString();
+    if(props.maxAge) attrs += ';Max-Age=' + props.maxAge;
+    if(props.domain) attrs += ';Domain=' + props.domain;
+    if(props.path) attrs += ';Path=' + props.path;
+    if(props.secure) attrs += ';Secure';
+    if(props.httpOnly) attrs += ';HttpOnly';
+
+    obj = obj || {};
+    keys = Object.keys(obj);
+
+    for(j = 0;j < keys.length;j++){
+      i = keys[j];
+      document.cookie = pct.encodeComponent(i) + '=' + pct.encodeComponent(obj[i]) + attrs;
     }
-    
-    emitter.give('rsc',this);
-  }}
-  
+
+  },
+
+  language: function(lang){
+    if(!lang) return this[langMap].entries();
+    if(this[langMap].has(lang)) return this[langMap].get(lang);
+    return this[langMap].get('*');
+  },
+
+  redirect: function(loc){
+    handle(loc,true);
+  }
+
 });
 
+// - utils
+
+function getYielded(script,n){
+  if(script[resolver]) return script[resolver].yielded;
+
+  script[name] = n;
+  script[resolver] = new Resolver();
+
+  script.onload = onScriptLoad;
+  script.onerror = onScriptError;
+
+  return script[resolver].yielded;
+}
+
+function onScriptLoad(){
+  var script = (this[name] || '').toLowerCase().replace(/\W/g,''),
+      tag = 'wapp_script_' + script;
+
+  this[resolver].accept(global[tag]);
+}
+
+function onScriptError(e){
+  this[resolver].reject(new Error('Could not load ' + this[name]));
+}
+
+function onPopState(e){
+  var ev,firstDigit,pn,code;
+
+  k = (k + 1)%1e15;
+
+  if(
+    !(e.state instanceof Array) ||
+    e.state[0] != 'wapp_state' ||
+    typeof e.state[1] != 'number'
+  ) return handle(getPathname(),true);
+
+  firstDigit = Math.floor(e.state[1] / 100);
+
+  if(firstDigit == 2){
+    pn = getPathname();
+    ev = new Event(pn,wapp[maximum],pn);
+    ev.data = e.state[2];
+    ev.next();
+    return;
+  }
+
+  if(firstDigit != 4 && firstDigit != 5) code = 400;
+  else code = e.state[1];
+
+  ev = new Event('e/' + code,wapp[maximum],getPathname());
+  ev.data = e.state[2];
+  ev.next();
+}
+
+function handle(url,replace){
+  var xhr;
+
+  url = pct.encode(url);
+  if(!global.history || /^\w+/.test(url)) return location.href = url;
+  url = document.baseURI.replace(/\/[^\/]*$/,'') + url;
+
+  xhr = new XMLHttpRequest();
+
+  xhr.fromURL = url;
+  xhr.replaceState = replace;
+  xhr.originalK = k = (k + 1)%1e15;
+
+  xhr.onreadystatechange = listener;
+  xhr.open('GET',url,true);
+  xhr.setRequestHeader('Accept','application/json');
+  xhr.send();
+}
+
+function listener(){
+  var data,state;
+
+  if(this.readyState == 4 && this.originalK == k){
+
+    data = JSON.parse(this.responseText);
+    state = ['wapp_state',this.status,data];
+
+    if(this.replaceState) history.replaceState(state,'',this.fromURL);
+    else history.pushState(state,'',this.fromURL);
+
+    onPopState({state: state});
+  }
+
+}
+
+function getPathname(){
+  return pct.decode(
+    (location.origin + location.pathname).replace(document.baseURI.replace(/\/[^\/]*$/,''),'')
+  );
+}
+
+function queryReplace(m,key,value){
+  key = pct.decodeComponent(key);
+  value = pct.decodeComponent(value || '');
+
+  if(holder.hasOwnProperty(key)) holder[key] = [].concat(holder[key],value);
+  else holder[key] = value;
+}
+
+function getQuery(search){
+  search = search.slice(1);
+
+  holder = {};
+  search.replace(/\+/g,'%20').replace(/(.+?)(?:=(.*?))?(&|$)/g,queryReplace);
+  try{ return Object.freeze(holder); }
+  finally{ holder = null; }
+}
+
+function cookieReplace(m,key,value){
+  if(key == 'wapp_prefix') return;
+  if(key == 'wapp_status') return;
+
+  key = pct.decodeComponent(key);
+  value = pct.decodeComponent(value);
+
+  holder[key] = value;
+}
+
+function getCookies(cookieStr){
+  holder = {};
+  cookieStr.replace(/(?:^|\s*;\s*)(.+?)(?:\s*=\s*(.*?))?\s*(?=;|$)/g,cookieReplace);
+  try{ return Object.freeze(holder); }
+  finally{ holder = null; }
+}
+
+/*/ exports /*/
+
+module.exports = wapp;
