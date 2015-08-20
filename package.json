@@ -1,6 +1,6 @@
 {
   "name": "wapp",
-  "version": "11.6.2",
+  "version": "12.0.0",
   "description": "SPA framework",
   "main": "main.js",
   "bin": "./bin.js",
@@ -17,7 +17,6 @@
     "hsm": "",
     "path-event": "",
     "pct": "",
-
     "chokidar": "^1",
     "browserify": "^10",
     "watchify": "^3",
