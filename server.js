@@ -6,7 +6,7 @@ var Hsm = require('hsm'),
     Target = require('y-emitter').Target,
     wrap = require('y-walk').wrap,
 
-    path = require('path'),
+    pth = require('path'),
 
     getConf = require('./server/getConf.js'),
     fillTemplate = require('./server/fillTemplate.js'),
@@ -16,7 +16,8 @@ var Hsm = require('hsm'),
     maximum = Symbol(),
     emitter = Symbol(),
 
-    pathname = Symbol(),
+    path = Symbol(),
+    url = Symbol(),
     hsmEvent = Symbol(),
     prefix = Symbol(),
     configuration = Symbol(),
@@ -34,8 +35,10 @@ function Wapp(server,dir,opt){
 
   dir = dir || process.cwd();
 
-  this[maximum] = null;
+  Hsm.call(this);
   Target.call(this,emitter);
+
+  this[maximum] = null;
   updateMax(this,maximum);
 
   opt = opt || {};
@@ -83,7 +86,7 @@ function Wapp(server,dir,opt){
 
 }
 
-Wapp.prototype = Object.create(Target.prototype);
+Wapp.prototype = Object.create(Hsm.prototype);
 Wapp.prototype[define]({
 
   constructor: Wapp,
@@ -102,7 +105,7 @@ function* onScript(a,d,cy){
       e = a[0],
       file = a[2];
 
-  try{ yield e.sendFile(path.resolve(conf.build,'scripts',file)); }
+  try{ yield e.sendFile(pth.resolve(conf.build,'scripts',file)); }
   catch(er){
     e[error] = er;
     e.next();
@@ -116,7 +119,7 @@ function* onAssets(a,d,cy){
       e = a[0],
       file = a[2];
 
-  try{ yield e.sendFile(path.resolve(conf.assets,file)); }
+  try{ yield e.sendFile(pth.resolve(conf.assets,file)); }
   catch(er){
     e[error] = er;
     e.next();
@@ -132,6 +135,8 @@ function* onReq(a, d, cy, gzipLevel, prefix, w, headers, corsHandler, corsTimeou
 
   if(he[error]) path = 'e/' + (eCode = getCode(he[error]));
   else path = pathname;
+
+  path = w.compute(path);
 
   if(path.indexOf('/.') != -1) return he.next();
 
@@ -153,7 +158,7 @@ function Event(path,he,conf,gzipLevel,e,max,pn,pref,headers){
 
   PathEvent.call(this,path,e,max);
 
-  this[pathname] = pn;
+  this[path] = pn;
   this[hsmEvent] = he;
   this[prefix] = pref;
 
@@ -179,7 +184,7 @@ Event.prototype[define]({
 
       try{
 
-        yield he.sendFile(path.resolve(conf.build,'static',st + '.json'),{
+        yield he.sendFile(pth.resolve(conf.build,'static',st + '.json'),{
           code: status,
           mimeHeaders: this[globalHeaders]
         });
@@ -195,7 +200,7 @@ Event.prototype[define]({
 
       try{
 
-        yield he.sendFile(path.resolve(conf.build,'static',st + '.html'),{
+        yield he.sendFile(pth.resolve(conf.build,'static',st + '.html'),{
           code: status,
           mimeHeaders: this[globalHeaders]
         });
@@ -239,7 +244,7 @@ Event.prototype[define]({
 
   throw: function(code){
     var path = 'e/' + code,
-        ev = new Event(path,this[hsmEvent],this[configuration],this[gzLv],this[emitter],this[emitter].target[maximum],this[pathname],this[prefix],this[globalHeaders]),
+        ev = new Event(path,this[hsmEvent],this[configuration],this[gzLv],this[emitter],this[emitter].target[maximum],this[path],this[prefix],this[globalHeaders]),
         firstDigit;
 
     if(typeof code != 'number') code = 500;
@@ -254,12 +259,22 @@ Event.prototype[define]({
     ev.next();
   },
 
-  get hash(){ return this[hsmEvent].hash; },
-  get search(){ return this[hsmEvent].search; },
+  get fragment(){ return this[hsmEvent].fragment; },
+  get rawQuery(){ return this[hsmEvent].rawQuery; },
   get query(){ return this[hsmEvent].query; },
-  get pathname(){ return this[pathname]; },
-  get path(){ return this.pathname + this.search; },
-  get href(){ return this.pathname + this.search + this.hash; },
+  get path(){ return this[path]; },
+  get url(){
+    var he,p,q,f;
+
+    if(this[url]) return this[url];
+
+    he = this[hsmEvent];
+    p = this[path];
+    q = he.rawQuery != null ? '?' + he.rawQuery : '';
+    f = he.fragment != null ? '#' + he.fragment : '';
+
+    return this[url] = p + q + f;
+  },
 
   get origin(){ return this[hsmEvent].origin; },
   get cookies(){ return this[hsmEvent].cookies; },

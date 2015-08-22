@@ -5,10 +5,11 @@ var PathEvent = require('path-event'),
     Resolver = require('y-resolver'),
     pct = require('pct'),
 
-    hash = Symbol(),
-    search = Symbol(),
+    fragment = Symbol(),
     query = Symbol(),
-    pathname = Symbol(),
+    rawQuery = Symbol(),
+    path = Symbol(),
+    url = Symbol(),
     origin = Symbol(),
     cookies = Symbol(),
     cookieStr = Symbol(),
@@ -71,9 +72,9 @@ function Event(p,max,pn){
 
   PathEvent.call(this,p,wappEmitter,max);
 
-  this[hash] = pct.decode(location.hash);
-  this[search] = pct.decode(location.search);
-  this[pathname] = pn;
+  this[fragment] = pct.decode(location.hash).slice(1);
+  this[rawQuery] = pct.decode(location.search).slice(1);
+  this[path] = pn;
   this[origin] = pct.decode(location.origin);
   this[cookieStr] = document.cookie;
 
@@ -90,12 +91,21 @@ Event.prototype[define]({
 
   constructor: Event,
 
-  get hash(){ return this[hash]; },
-  get search(){ return this[search]; },
-  get query(){ return this[query] = this[query] || getQuery(this[search]); },
-  get pathname(){ return this[pathname]; },
-  get path(){ return this.pathname + this.search; },
-  get href(){ return this.pathname + this.search + this.hash; },
+  get fragment(){ return this[fragment]; },
+  get rawQuery(){ return this[rawQuery]; },
+  get query(){ return this[query] = this[query] || getQuery(this[rawQuery]); },
+  get path(){ return this[path]; },
+  get url(){
+    var he,p,q,f;
+
+    if(this[url]) return this[url];
+
+    p = this[path];
+    q = this[rawQuery] != null ? '?' + this[rawQuery] : '';
+    f = this[fragment] != null ? '#' + this[fragment] : '';
+
+    return this[url] = p + q + f;
+  },
 
   get origin(){ return this[origin]; },
   get cookies(){ return this[cookies] = this[cookies] || getCookies(this[cookieStr]); },
@@ -238,11 +248,9 @@ function queryReplace(m,key,value){
   else holder[key] = value;
 }
 
-function getQuery(search){
-  search = search.slice(1);
-
+function getQuery(query){
   holder = {};
-  search.replace(/\+/g,'%20').replace(/(.+?)(?:=(.*?))?(&|$)/g,queryReplace);
+  query.replace(/\+/g,'%20').replace(/(.+?)(?:=(.*?))?(&|$)/g,queryReplace);
   try{ return Object.freeze(holder); }
   finally{ holder = null; }
 }
