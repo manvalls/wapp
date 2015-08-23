@@ -72,8 +72,8 @@ function Event(p,max,pn){
 
   PathEvent.call(this,p,wappEmitter,max);
 
-  this[fragment] = pct.decode(location.hash).slice(1);
-  this[rawQuery] = pct.decode(location.search).slice(1);
+  this[fragment] = location.hash ? pct.decode(location.hash).slice(1) : null;
+  this[rawQuery] = location.search ? pct.decode(location.search).slice(1) : null;
   this[path] = pn;
   this[origin] = pct.decode(location.origin);
   this[cookieStr] = document.cookie;
@@ -179,7 +179,7 @@ function onPopState(e){
     !(e.state instanceof Array) ||
     e.state[0] != 'wapp_state' ||
     typeof e.state[1] != 'number'
-  ) return handle(getPathname(),true);
+  ) return handle(getPathname() + location.search + location.hash,true);
 
   firstDigit = Math.floor(e.state[1] / 100);
 
@@ -222,7 +222,6 @@ function listener(){
   var data,state;
 
   if(this.readyState == 4 && this.originalK == k){
-
     data = JSON.parse(this.responseText);
     state = ['wapp_state',this.status,data];
 
@@ -249,6 +248,8 @@ function queryReplace(m,key,value){
 }
 
 function getQuery(query){
+  query = (query || '') + '';
+
   holder = {};
   query.replace(/\+/g,'%20').replace(/(.+?)(?:=(.*?))?(&|$)/g,queryReplace);
   try{ return Object.freeze(holder); }
@@ -256,9 +257,6 @@ function getQuery(query){
 }
 
 function cookieReplace(m,key,value){
-  if(key == 'wapp_prefix') return;
-  if(key == 'wapp_status') return;
-
   key = pct.decodeComponent(key);
   value = pct.decodeComponent(value);
 
@@ -266,11 +264,15 @@ function cookieReplace(m,key,value){
 }
 
 function getCookies(cookieStr){
+  cookieStr = (cookieStr || '') + '';
+
   holder = {};
   cookieStr.replace(/(?:^|\s*;\s*)(.+?)(?:\s*=\s*(.*?))?\s*(?=;|$)/g,cookieReplace);
   try{ return Object.freeze(holder); }
   finally{ holder = null; }
 }
+
+if(global.history) addEventListener('popstate',onPopState);
 
 /*/ exports /*/
 

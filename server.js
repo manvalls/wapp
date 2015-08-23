@@ -62,6 +62,8 @@ function Wapp(server,dir,opt){
 
   }
 
+  headers.html['Cache-Control'] = headers.json['Cache-Control'] = 'no-cache';
+
   cy = getConf(dir);
   this[collection] = new Collection();
 
@@ -154,9 +156,9 @@ function* onReq(a, d, cy, gzipLevel, prefix, w, headers, corsHandler, corsTimeou
 
 // Event
 
-function Event(path,he,conf,gzipLevel,e,max,pn,pref,headers){
+function Event(pth,he,conf,gzipLevel,e,max,pn,pref,headers){
 
-  PathEvent.call(this,path,e,max);
+  PathEvent.call(this,pth,e,max);
 
   this[path] = pn;
   this[hsmEvent] = he;
