@@ -8,12 +8,12 @@ try{
 (function(){
   var JSONdata = {{data}},
       status = parseInt(decodeURIComponent(document.cookie.match(
-        /(?:^|.*;\s*)wapp_status\s*=\s*(.*?)(?:\s*;|$)/
+        /(?:^\s*?|.*?;\s*?)wapp_status\s*=\s*(.*?)(?:\s*;|$)/
       )[1])),
       prefix = decodeURIComponent(document.cookie.match(
-        /(?:^|.*;\s*)wapp_prefix\s*=\s*(.*?)(?:\s*;|$)/
+        /(?:^\s*?|.*?;\s*?)wapp_prefix\s*=\s*(.*?)(?:\s*;|$)/
       )[1]);
-
+  
   location.origin = location.origin || location.href.match(/\w+:\/\/[^\/]+/)[0];
 
   document.write(

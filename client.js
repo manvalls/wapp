@@ -32,7 +32,42 @@ updateMax(wapp,maximum);
 
 wapp[define]({
 
-  goTo: function(loc){
+  goTo: function(loc,query,fragment){
+    var m,q,f,s,h,p,
+        keys,i,j;
+
+    loc = (loc || '') + '';
+    m = loc.match(/([^#\?]*)(?:\?([^#]*))?(?:#(.*))?/);
+
+    p = m[1] || '';
+    q = m[2] || '';
+    f = m[3] || '';
+
+    if(typeof query != 'object'){
+      fragment = query;
+      query = null;
+    }
+
+    if(query){
+
+      if(q) q += '&';
+
+      keys = Object.keys(query);
+      for(j = 0;j < keys.length;j++){
+        i = keys[j];
+        q += pct.encodeComponent(i) + '=' + pct.encodeComponent(query[i]) + '&';
+      }
+
+      q = q.slice(0,-1);
+
+    }
+
+    if(fragment) f = fragment;
+
+    loc = p;
+    if(q) loc += '?' + q;
+    if(f) loc += '#' + f;
+
     handle(loc);
   },
 
@@ -200,11 +235,36 @@ function onPopState(e){
 }
 
 function handle(url,replace){
-  var xhr;
+  var xhr,base,baseURI,i,parts,part,result;
 
   url = pct.encode(url);
-  if(!global.history || /^\w+/.test(url)) return location.href = url;
-  url = document.baseURI.replace(/\/[^\/]*$/,'') + url;
+  if(!global.history || /^\w+:\/\//.test(url)) return location.href = url;
+
+  if(url.charAt(0) == '/') url = document.baseURI.replace(/\/[^\/]*$/,'') + url;
+  else{
+
+    base = location.href.replace(/[^\/]*$/,'');
+    baseURI = document.baseURI.replace(/[^\/]*$/,'');
+
+    i = base.indexOf(baseURI);
+    if(i == 0){
+
+      result = [];
+      parts = (base.slice(baseURI.length) + url).split('/');
+
+      while((part = parts.shift()) != null) switch(part){
+        case '.': break;
+        case '..':
+          result.pop();
+          break;
+        default: result.push(part);
+      }
+
+      url = baseURI + result.join('/');
+
+    }else url = document.baseURI.replace(/\/[^\/]*$/,'') + url;
+
+  }
 
   xhr = new XMLHttpRequest();
 
