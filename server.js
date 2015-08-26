@@ -5,6 +5,7 @@ var Hsm = require('hsm'),
     updateMax = require('path-event/updateMax'),
     Target = require('y-emitter').Target,
     wrap = require('y-walk').wrap,
+    UrlRewriter = require('url-rewriter'),
 
     pth = require('path'),
 
@@ -35,7 +36,7 @@ function Wapp(server,dir,opt){
 
   dir = dir || process.cwd();
 
-  Hsm.call(this);
+  UrlRewriter.call(this);
   Target.call(this,emitter);
 
   this[maximum] = null;
@@ -88,7 +89,7 @@ function Wapp(server,dir,opt){
 
 }
 
-Wapp.prototype = Object.create(Hsm.prototype);
+Wapp.prototype = Object.create(UrlRewriter.prototype);
 Wapp.prototype[define]({
 
   constructor: Wapp,

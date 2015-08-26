@@ -1,9 +1,10 @@
 var PathEvent = require('path-event'),
     updateMax = require('path-event/updateMax'),
-    Emitter = require('y-emitter'),
+    Target = require('y-emitter').Target,
     define = require('u-proto/define'),
     Resolver = require('y-resolver'),
     pct = require('pct'),
+    UrlRewriter = require('url-rewriter'),
 
     fragment = Symbol(),
     query = Symbol(),
@@ -17,6 +18,7 @@ var PathEvent = require('path-event'),
 
     maximum = Symbol(),
     resolver = Symbol(),
+    emitter = Symbol(),
     name = Symbol(),
 
     k = 0,
@@ -25,9 +27,10 @@ var PathEvent = require('path-event'),
 
 // wapp
 
-wappEmitter = new Emitter();
-wapp = wappEmitter.target;
+wapp = new UrlRewriter();
+Target.call(wapp,emitter);
 
+wappEmitter = wapp[emitter];
 updateMax(wapp,maximum);
 
 wapp[define]({
@@ -102,14 +105,17 @@ wapp[define]({
 
 // Event
 
-function Event(p,max,pn){
-  var langs,i;
+function Event(max,p){
+  var langs,i,url,m;
 
-  PathEvent.call(this,p,wappEmitter,max);
+  url = wapp.compute(getPathname() + location.search + location.hash);
+  m = url.match(/([^\?#]*)(?:\?([^#]*))?(?:#(.*))?/);
 
-  this[fragment] = location.hash ? pct.decode(location.hash).slice(1) : null;
-  this[rawQuery] = location.search ? pct.decode(location.search).slice(1) : null;
-  this[path] = pn;
+  PathEvent.call(this,p || m[1],wappEmitter,max);
+
+  this[fragment] = m[3];
+  this[rawQuery] = m[2];
+  this[path] = m[1];
   this[origin] = pct.decode(location.origin);
   this[cookieStr] = document.cookie;
 
@@ -206,7 +212,7 @@ function onScriptError(e){
 }
 
 function onPopState(e){
-  var ev,firstDigit,pn,code;
+  var ev,firstDigit,code;
 
   k = (k + 1)%1e15;
 
@@ -219,8 +225,7 @@ function onPopState(e){
   firstDigit = Math.floor(e.state[1] / 100);
 
   if(firstDigit == 2){
-    pn = getPathname();
-    ev = new Event(pn,wapp[maximum],pn);
+    ev = new Event(wapp[maximum]);
     ev.data = e.state[2];
     ev.next();
     return;
@@ -229,7 +234,7 @@ function onPopState(e){
   if(firstDigit != 4 && firstDigit != 5) code = 400;
   else code = e.state[1];
 
-  ev = new Event('e/' + code,wapp[maximum],getPathname());
+  ev = new Event(wapp[maximum],'e/' + code);
   ev.data = e.state[2];
   ev.next();
 }
@@ -320,7 +325,7 @@ function cookieReplace(m,key,value){
   key = pct.decodeComponent(key);
   value = pct.decodeComponent(value);
 
-  holder[key] = value;
+  if(!holder.hasOwnProperty(key)) holder[key] = value;
 }
 
 function getCookies(cookieStr){

@@ -17,8 +17,9 @@
     "hsm": "",
     "path-event": "",
     "pct": "",
+    "url-rewriter": "",
     "chokidar": "^1",
-    "browserify": "^10",
+    "browserify": "^11",
     "watchify": "^3",
     "babelify": "^6",
     "babel-core": "^5"
