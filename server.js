@@ -70,9 +70,9 @@ function Wapp(server,dir,opt){
 
   hsm = new Hsm(server,opt.host);
 
-  this[collection].add( hsm.on(opt.prefix + '/.scripts/*',onScript,cy) );
-  this[collection].add( hsm.on(opt.prefix + '/.assets/*',onAssets,cy) );
-  this[collection].add( hsm.on(
+  this[collection].add( hsm.gh(opt.prefix + '/.scripts/*',onScript,cy) );
+  this[collection].add( hsm.gh(opt.prefix + '/.assets/*',onAssets,cy) );
+  this[collection].add( hsm.gh(
     opt.prefix + '/*',
     onReq,
     cy,
