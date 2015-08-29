@@ -44,7 +44,7 @@ function Wapp(server,dir,opt){
 
   opt = opt || {};
   opt.gzipLevel = opt.gzipLevel || 4;
-  opt.prefix = opt.prefix || '';
+  opt.prefix = this.format(opt.prefix || '');
 
   if(opt.hasOwnProperty('framing')){
 
@@ -199,7 +199,7 @@ Event.prototype[define]({
       he.setCookie({
         wapp_prefix: this[prefix],
         wapp_status: status
-      },{path: this[prefix] + '/'});
+      });
 
       try{
 
@@ -233,7 +233,7 @@ Event.prototype[define]({
       he.setCookie({
         wapp_prefix: this[prefix],
         wapp_status: status
-      },{path: this[prefix] + '/'});
+      });
 
       he.send(fillTemplate(jsonData),{
         code: status,
@@ -291,14 +291,14 @@ Event.prototype[define]({
     if(he.accept('application/json') <= he.accept('text/html')) he.setCookie({
       wapp_prefix: this[prefix],
       wapp_status: this[error] || 200
-    },{path: this[prefix] + '/'});
+    });
 
     he.notModified();
   },
 
-  redirect: function(location,permanent){
-    if(/^\w+/.test(location)) this[hsmEvent].redirect(location,permanent);
-    else this[hsmEvent].redirect(this[prefix] + location,permanent);
+  redirect: function(location,query,fragment,permanent){
+    if(/^\w+/.test(location)) this[hsmEvent].redirect(location,query,fragment,permanent);
+    else this[hsmEvent].redirect(this[prefix] + location,query,fragment,permanent);
   }
 
 });

@@ -22,61 +22,30 @@ var PathEvent = require('path-event'),
     name = Symbol(),
 
     k = 0,
+    prefix = global.wapp_prefix,
+    state = global.wapp_state,
 
-    wapp,wappEmitter,holder;
+    app,appEmitter,holder;
 
-// wapp
+// app
 
-wapp = new UrlRewriter();
-Target.call(wapp,emitter);
+app = new UrlRewriter();
+Target.call(app,emitter);
 
-wappEmitter = wapp[emitter];
-updateMax(wapp,maximum);
+appEmitter = app[emitter];
+updateMax(app,maximum);
 
-wapp[define]({
+app[define]({
+
+  prefix: prefix,
 
   goTo: function(loc,query,fragment){
-    var m,q,f,s,h,p,
-        keys,i,j;
-
-    loc = (loc || '') + '';
-    m = loc.match(/([^#\?]*)(?:\?([^#]*))?(?:#(.*))?/);
-
-    p = m[1] || '';
-    q = m[2] || '';
-    f = m[3] || '';
-
-    if(typeof query != 'object'){
-      fragment = query;
-      query = null;
-    }
-
-    if(query){
-
-      if(q) q += '&';
-
-      keys = Object.keys(query);
-      for(j = 0;j < keys.length;j++){
-        i = keys[j];
-        q += pct.encodeComponent(i) + '=' + pct.encodeComponent(query[i]) + '&';
-      }
-
-      q = q.slice(0,-1);
-
-    }
-
-    if(fragment) f = fragment;
-
-    loc = p;
-    if(q) loc += '?' + q;
-    if(f) loc += '#' + f;
-
-    handle(loc);
+    handle(loc,query,fragment);
   },
 
   trigger: function(){
     if(global.history) onPopState(history);
-    else onPopState({state: wapp_state});
+    else onPopState({state: state});
   },
 
   load: function(script){
@@ -95,10 +64,16 @@ wapp[define]({
     scr.type = 'text\/javascript';
     (document.head || document.getElementsByTagName('head')[0]).appendChild(scr);
 
-    if(global.wapp_mode == 'ES5') scr.src = '.scripts/' + script + '.es5.js';
-    else scr.src = '.scripts/' + script + '.js';
+    if(global.wapp_mode == 'ES5') scr.src = encodeURI(location.origin + prefix + '/.scripts/' + script + '.es5.js');
+    else scr.src = encodeURI(location.origin + prefix + '/.scripts/' + script + '.js');
 
     return yd;
+  },
+
+  asset: function(url){
+    if(url.charAt(0) != '/') url = getPathname(document.baseURI).replace(/[^\/]*$/,'') + url;
+    url = app.format(url);
+    return encodeURI(location.origin + prefix + '/.assets' + url);
   }
 
 });
@@ -108,10 +83,10 @@ wapp[define]({
 function Event(max,p){
   var langs,i,url,m;
 
-  url = wapp.compute(getPathname() + location.search + location.hash);
+  url = app.compute(getPathname() + location.search + location.hash);
   m = url.match(/([^\?#]*)(?:\?([^#]*))?(?:#(.*))?/);
 
-  PathEvent.call(this,p || m[1],wappEmitter,max);
+  PathEvent.call(this,p || m[1],appEmitter,max);
 
   this[fragment] = m[3];
   this[rawQuery] = m[2];
@@ -180,8 +155,8 @@ Event.prototype[define]({
     return this[langMap].get('*');
   },
 
-  redirect: function(loc){
-    handle(loc,true);
+  redirect: function(loc,query,fragment){
+    handle(loc,query,fragment,true);
   }
 
 });
@@ -220,13 +195,16 @@ function onPopState(e){
     !(e.state instanceof Array) ||
     e.state[0] != 'wapp_state' ||
     typeof e.state[1] != 'number'
-  ) return handle(getPathname() + location.search + location.hash,true);
+  ) return handle(getPathname() + location.search + location.hash,null,null,true);
 
   firstDigit = Math.floor(e.state[1] / 100);
 
   if(firstDigit == 2){
-    ev = new Event(wapp[maximum]);
-    ev.data = e.state[2];
+    ev = new Event(app[maximum]);
+
+    if(e.state[2] instanceof Object) Object.freeze(e.state[2]);
+    ev[define]('data',e.state[2]);
+
     ev.next();
     return;
   }
@@ -234,42 +212,26 @@ function onPopState(e){
   if(firstDigit != 4 && firstDigit != 5) code = 400;
   else code = e.state[1];
 
-  ev = new Event(wapp[maximum],'e/' + code);
-  ev.data = e.state[2];
+  ev = new Event(app[maximum],'e/' + code);
+
+  if(e.state[2] instanceof Object) Object.freeze(e.state[2]);
+  ev[define]('data',e.state[2]);
+
   ev.next();
 }
 
-function handle(url,replace){
-  var xhr,base,baseURI,i,parts,part,result;
+function replaceDots(m){
+  return m.replace(/\/\./g,'/');
+}
 
-  url = pct.encode(url);
-  if(!global.history || /^\w+:\/\//.test(url)) return location.href = url;
+function handle(url,query,fragment,replace){
+  var xhr;
 
-  if(url.charAt(0) == '/') url = document.baseURI.replace(/\/[^\/]*$/,'') + url;
-  else{
+  if(url.charAt(0) != '/') url = getPathname(document.baseURI).replace(/[^\/]*$/,'') + url;
+  url = app.format(url,query,fragment);
 
-    base = location.href.replace(/[^\/]*$/,'');
-    baseURI = document.baseURI.replace(/[^\/]*$/,'');
-
-    i = base.indexOf(baseURI);
-    if(i == 0){
-
-      result = [];
-      parts = (base.slice(baseURI.length) + url).split('/');
-
-      while((part = parts.shift()) != null) switch(part){
-        case '.': break;
-        case '..':
-          result.pop();
-          break;
-        default: result.push(part);
-      }
-
-      url = baseURI + result.join('/');
-
-    }else url = document.baseURI.replace(/\/[^\/]*$/,'') + url;
-
-  }
+  url = url.replace(/^[^#\?]*/,replaceDots);
+  url = encodeURI(location.origin + prefix + url);
 
   xhr = new XMLHttpRequest();
 
@@ -298,10 +260,18 @@ function listener(){
 
 }
 
-function getPathname(){
-  return pct.decode(
-    (location.origin + location.pathname).replace(document.baseURI.replace(/\/[^\/]*$/,''),'')
-  );
+function getPathname(p){
+  var i;
+
+  p = pct.decode((p || location.pathname).match(/^(?:\w+\:\/\/[^\/]*)?([^#\?]*)/)[1]);
+  i = p.indexOf(prefix);
+
+  if(i != 0){
+    location.reload(true);
+    throw new Error('Wrong prefix, reloading...');
+  }
+
+  return p.slice(prefix.length);
 }
 
 function queryReplace(m,key,value){
@@ -341,4 +311,4 @@ if(global.history) addEventListener('popstate',onPopState);
 
 /*/ exports /*/
 
-module.exports = wapp;
+module.exports = app;
