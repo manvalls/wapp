@@ -60,11 +60,13 @@ The server decides which data corresponds to each URL. The `Wapp` - a subclass o
   - gzipLevel ( *Number* ) `= 4`
   - prefix ( *String* ) `= ''`
   - host ( *String* )
-  - corsHandler ( *String* | *RegExp* | *Function* )
-  - corsTimeout ( *Number* )
-  - corsMethods ( *Set* )
-  - corsResH ( *Set* )
-  - corsReqH ( *Set* )
+  - cors ( *Object* )
+    - origin ( *String* | *RegExp* | *Function* )
+    - methods ( *Set* )
+    - requestHeaders ( *Set* )
+    - responseHeaders ( *Set* )
+    - timeout ( *Number* )
+    - allowCredentials ( *Boolean* )
 
 If you choose a prefix other than the empty string, your app will be served at `http://yourhost.com <prefix> /`. CORS and host options refer to their [Hsm counterparts](https://www.npmjs.com/package/hsm). If you want wapp to ignore some URLs, include a path segment starting with a dot other than `.` and `..`, e.g:
 

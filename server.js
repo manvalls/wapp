@@ -70,8 +70,8 @@ function Wapp(server,dir,opt){
 
   hsm = new Hsm(server,opt.host);
 
-  this[collection].add( hsm.gh(opt.prefix + '/.scripts/*',onScript,cy) );
-  this[collection].add( hsm.gh(opt.prefix + '/.assets/*',onAssets,cy) );
+  this[collection].add( hsm.gh(opt.prefix + '/.scripts/*',onScript,cy,opt.cors) );
+  this[collection].add( hsm.gh(opt.prefix + '/.assets/*',onAssets,cy,opt.cors) );
   this[collection].add( hsm.gh(
     opt.prefix + '/*',
     onReq,
@@ -80,11 +80,7 @@ function Wapp(server,dir,opt){
     opt.prefix,
     this,
     headers,
-    opt.corsHandler,
-    opt.corsTimeout,
-    opt.corsMethods,
-    opt.corsResH,
-    opt.corsReqH
+    opt.cors
   ) );
 
 }
@@ -102,11 +98,13 @@ Wapp.prototype[define]({
 
 // - utils
 
-function* onScript(a,d,cy){
+function* onScript(a,d,cy,cors){
   var conf = yield cy,
 
       e = a[0],
       file = a[2];
+
+  if(cors && cors.origin) yield e.checkOrigin(cors.origin,cors);
 
   try{ yield e.sendFile(pth.resolve(conf.build,'scripts',file)); }
   catch(er){
@@ -116,11 +114,13 @@ function* onScript(a,d,cy){
 
 }
 
-function* onAssets(a,d,cy){
+function* onAssets(a,d,cy,cors){
   var conf = yield cy,
 
       e = a[0],
       file = a[2];
+
+  if(cors && cors.origin) yield e.checkOrigin(cors.origin,cors);
 
   try{ yield e.sendFile(pth.resolve(conf.assets,file)); }
   catch(er){
@@ -130,7 +130,7 @@ function* onAssets(a,d,cy){
 
 }
 
-function* onReq(a, d, cy, gzipLevel, prefix, w, headers, corsHandler, corsTimeout, corsMethods, corsReqH, corsResH){
+function* onReq(a, d, cy, gzipLevel, prefix, w, headers, cors){
   var conf = yield cy,
       he = a[0],
       pathname = '/' + a[2],
@@ -143,12 +143,7 @@ function* onReq(a, d, cy, gzipLevel, prefix, w, headers, corsHandler, corsTimeou
 
   if(path.indexOf('/.') != -1) return he.next();
 
-  if(corsHandler) yield he.checkOrigin(corsHandler,{
-    timeout: corsTimeout,
-    methods: corsMethods,
-    requestHeaders: corsReqH,
-    responseHeaders: corsResH
-  });
+  if(cors && cors.origin) yield he.checkOrigin(cors.origin,cors);
 
   ev = new Event(path,he,conf,gzipLevel,w[emitter],w[maximum],pathname,prefix,headers);
   ev[error] = eCode;
