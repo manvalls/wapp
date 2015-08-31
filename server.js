@@ -44,7 +44,7 @@ function Wapp(server,dir,opt){
 
   opt = opt || {};
   opt.gzipLevel = opt.gzipLevel || 4;
-  opt.prefix = this.format(opt.prefix || '');
+  this[prefix] = opt.prefix = this.format(opt.prefix || '');
 
   if(opt.hasOwnProperty('framing')){
 
@@ -92,7 +92,9 @@ Wapp.prototype[define]({
 
   detach: function(){
     this[collection].detach();
-  }
+  },
+
+  get prefix(){ return this[prefix]; }
 
 });
 

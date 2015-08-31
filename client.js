@@ -6,13 +6,14 @@ var PathEvent = require('path-event'),
     pct = require('pct'),
     UrlRewriter = require('url-rewriter'),
 
+    query = require('hsm/Event/query'),
+    cookies = require('hsm/Event/cookies'),
+
     fragment = Symbol(),
-    query = Symbol(),
     rawQuery = Symbol(),
     path = Symbol(),
     url = Symbol(),
     origin = Symbol(),
-    cookies = Symbol(),
     cookieStr = Symbol(),
     langMap = Symbol(),
 
@@ -25,7 +26,7 @@ var PathEvent = require('path-event'),
     prefix = global.wapp_prefix,
     state = global.wapp_state,
 
-    app,appEmitter,holder;
+    app,appEmitter;
 
 // app
 
@@ -109,7 +110,7 @@ Event.prototype[define]({
 
   get fragment(){ return this[fragment]; },
   get rawQuery(){ return this[rawQuery]; },
-  get query(){ return this[query] = this[query] || getQuery(this[rawQuery]); },
+  get query(){ return query(this); },
   get path(){ return this[path]; },
   get url(){
     var he,p,q,f;
@@ -124,7 +125,7 @@ Event.prototype[define]({
   },
 
   get origin(){ return this[origin]; },
-  get cookies(){ return this[cookies] = this[cookies] || getCookies(this[cookieStr]); },
+  get cookies(){ return cookies(this,this[cookieStr]); },
 
   setCookie: function(obj,props){
     var attrs = '',
@@ -272,39 +273,6 @@ function getPathname(p){
   }
 
   return p.slice(prefix.length);
-}
-
-function queryReplace(m,key,value){
-  key = pct.decodeComponent(key);
-  value = pct.decodeComponent(value || '');
-
-  if(holder.hasOwnProperty(key)) holder[key] = [].concat(holder[key],value);
-  else holder[key] = value;
-}
-
-function getQuery(query){
-  query = (query || '') + '';
-
-  holder = {};
-  query.replace(/\+/g,'%20').replace(/(.+?)(?:=(.*?))?(&|$)/g,queryReplace);
-  try{ return Object.freeze(holder); }
-  finally{ holder = null; }
-}
-
-function cookieReplace(m,key,value){
-  key = pct.decodeComponent(key);
-  value = pct.decodeComponent(value);
-
-  if(!holder.hasOwnProperty(key)) holder[key] = value;
-}
-
-function getCookies(cookieStr){
-  cookieStr = (cookieStr || '') + '';
-
-  holder = {};
-  cookieStr.replace(/(?:^|\s*;\s*)(.+?)(?:\s*=\s*(.*?))?\s*(?=;|$)/g,cookieReplace);
-  try{ return Object.freeze(holder); }
-  finally{ holder = null; }
 }
 
 if(global.history) addEventListener('popstate',onPopState);
