@@ -94,7 +94,12 @@ Wapp.prototype[define]({
     this[collection].detach();
   },
 
-  get prefix(){ return this[prefix]; }
+  get prefix(){ return this[prefix]; },
+
+  asset: function(url){
+    url = this.format(url);
+    return encodeURI(this[prefix] + '/.assets' + url);
+  }
 
 });
 
