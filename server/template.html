@@ -21,7 +21,10 @@ try{ (function(){
   if(window.history) history.replaceState(['wapp_state',status,JSONdata],'',location.href);
   else window.wapp_state = ['wapp_state',status,JSONdata];
 
-})(); }catch(e){ location.reload(true); }
+})(); }catch(e){
+  location.reload(true);
+  throw new Error('Reloading...');
+}
 
 (function(){
 var test;

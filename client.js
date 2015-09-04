@@ -36,6 +36,8 @@ Target.call(app,emitter);
 appEmitter = app[emitter];
 updateMax(app,maximum);
 
+appEmitter.sun('ready','busy');
+
 app[define]({
 
   prefix: prefix,
@@ -191,6 +193,7 @@ function onPopState(e){
   var ev,firstDigit,code;
 
   k = (k + 1)%1e15;
+  appEmitter.sun('ready','busy');
 
   if(
     !(e.state instanceof Array) ||
@@ -234,6 +237,7 @@ function handle(url,query,fragment,replace){
   url = url.replace(/^[^#\?]*/,replaceDots);
   url = encodeURI(location.origin + prefix + url);
 
+  appEmitter.sun('busy','ready');
   xhr = new XMLHttpRequest();
 
   xhr.fromURL = url;

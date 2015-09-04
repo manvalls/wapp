@@ -206,6 +206,14 @@ up.type = 'button';
 up.value = 'click me to go up';
 document.body.appendChild(up);
 
+app.on('ready',function(){
+  up.disabled = false;
+});
+
+app.on('busy',function(){
+  up.disabled = true;
+});
+
 up.addEventListener('click',function(){
   app.goTo('..');
 });
@@ -213,7 +221,7 @@ up.addEventListener('click',function(){
 app.goTo('/one/two/three/four/',{foo: 'bar'},'frag');
 ```
 
-You can also use the History API, but please do not mess with states, only navigate through the history and leave `pushState` and `replaceState` for the internal usage of wapp, otherwise errors will surely happen.
+The client can be in one of two states: `busy` or `ready`, depending on whether there is an HTTP request in progress or not. You can also use the History API, but please do not mess with states, only navigate through the history and leave `pushState` and `replaceState` for the internal usage of wapp, otherwise errors will surely happen.
 
 By now you've got almost everything you need to build your web application using wapp. We'll discuss two more concepts: assets and dynamic script loading. You'll most probably need to use things like images, videos and the like: those are called assets. Place them at your `assets` folder, and get their URL using `app.asset()` like this:
 
