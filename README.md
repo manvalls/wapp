@@ -218,8 +218,10 @@ up.addEventListener('click',function(){
   app.goTo('..');
 });
 
-app.goTo('/one/two/three/four/',{foo: 'bar'},'frag');
+app.goTo('/one/two/three/four/',{foo: 'bar', _id: 5},'frag');
 ```
+
+Both calls accept three arguments: `path`, `query` and `fragment`. Query properties starting with an underscore (`_`) are sent in a `Query` header and thus cannot be seen on the navigation bar. They will be lost when reloading or navigating back or forward, and they won't be accessible at the client in any case, only at the server.
 
 The client can be in one of two states: `busy` or `ready`, depending on whether there is an HTTP request in progress or not. You can also use the History API, but please do not mess with states, only navigate through the history and leave `pushState` and `replaceState` for the internal usage of wapp, otherwise errors will surely happen.
 

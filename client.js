@@ -229,7 +229,7 @@ function replaceDots(m){
 }
 
 function handle(url,query,fragment,replace){
-  var xhr;
+  var xhr,i,qh;
 
   if(url.charAt(0) != '/') url = getPathname(document.baseURI).replace(/[^\/]*$/,'') + url;
   url = app.format(url,query,fragment);
@@ -240,6 +240,16 @@ function handle(url,query,fragment,replace){
   appEmitter.sun('busy','ready');
   xhr = new XMLHttpRequest();
 
+  if(query){
+    qh = '';
+
+    for(i in query) if(query.hasOwnProperty(i)){
+      if(i.charAt(0) != '_') continue;
+      qh += (qh ? '&' : '') + pct.encodeComponent(i) + '=' + pct.encodeComponent(query[i]);
+    }
+
+  }
+
   xhr.fromURL = url;
   xhr.replaceState = replace;
   xhr.originalK = k = (k + 1)%1e15;
@@ -247,6 +257,7 @@ function handle(url,query,fragment,replace){
   xhr.onreadystatechange = listener;
   xhr.open('GET',url,true);
   xhr.setRequestHeader('Accept','application/json');
+  if(qh) xhr.setRequestHeader('Query',qh);
   xhr.send();
 }
 
