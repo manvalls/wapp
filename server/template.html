@@ -32,15 +32,47 @@ var test;
 try{
 
   test = Symbol(); if(typeof test != 'symbol') throw new Error();
-  test = new Map(); test = new Set(); test = new WeakMap();
+  test = Symbol.for('foo'); if(typeof test != 'symbol') throw new Error();
+  if(Symbol.keyFor(Symbol.for('foo')) != 'foo') throw new Error();
+  if(!Symbol.iterator) throw new Error();
+
+  test = new Map(); test = new Set(); test = new WeakMap(); test = new WeakSet();
+  test = new Promise(function(){});
   eval('for(test of []){}');
   test = eval('a => a + 1');
   test = eval('function* test(){}');
+  eval('test = {[1 + 2]: 3, foo(){ return \'bar\';}, test}');
+
+  test = eval('0o644');
+  if(test != 420) throw new Error();
+  test = eval('0O755');
+  if(test != 493) throw new Error();
+  test = eval('0B00000000011111111111111111111111');
+  if(test != 8388607) throw new Error();
+
+  if(String.fromCodePoint(112,111,116,97,116,111,101) != 'potatoe') throw new Error();
+  if('potatoe'.codePointAt(6) != 101) throw new Error();
+  if('\u1E9B\u0323'.normalize('NFKC') != 'ṩ') throw new Error();
+  if(!'asd'.startsWith('as')) throw new Error();
+  if(!'asd'.endsWith('sd')) throw new Error();
+  if(!'potatoe'.includes('tatoe')) throw new Error();
+  if('foo'.repeat(2) != 'foofoo') throw new Error();
+  test = 1;
+  if(!eval("String.raw`\n${test}` == '\\n1'")) throw new Error();
+  if('\u{2F804}' != '你') throw new Error();
 
   (function(){
     "use strict";
+
     eval('let foo = "bar"');
     eval('const myConst = 5');
+    eval('class Foo{}');
+
+    if(true){
+      function blockFn(){}
+    }
+
+    if(typeof blockFn != 'undefined') throw new Error();
   })();
 
   window.wapp_mode = 'ES6';
