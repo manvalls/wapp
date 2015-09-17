@@ -22,11 +22,10 @@ var PathEvent = require('path-event'),
     emitter = Symbol(),
     name = Symbol(),
 
-    k = 0,
     prefix = global.wapp_prefix,
     state = global.wapp_state,
 
-    app,appEmitter;
+    xhr,app,appEmitter;
 
 // app
 
@@ -192,7 +191,11 @@ function onScriptError(e){
 function onPopState(e){
   var ev,firstDigit,code;
 
-  k = (k + 1)%1e15;
+  if(xhr){
+    xhr.abort();
+    xhr = null;
+  }
+
   appEmitter.sun('ready','busy');
 
   if(
@@ -229,7 +232,7 @@ function replaceDots(m){
 }
 
 function handle(url,query,fragment,replace){
-  var xhr,i,qh;
+  var i,qh;
 
   if(url.charAt(0) != '/') url = getPathname(document.baseURI).replace(/[^\/]*$/,'') + url;
   url = app.format(url,query,fragment);
@@ -252,7 +255,6 @@ function handle(url,query,fragment,replace){
 
   xhr.fromURL = url;
   xhr.replaceState = replace;
-  xhr.originalK = k = (k + 1)%1e15;
 
   xhr.onreadystatechange = listener;
   xhr.open('GET',url,true);
@@ -264,7 +266,10 @@ function handle(url,query,fragment,replace){
 function listener(){
   var data,state;
 
-  if(this.readyState == 4 && this.originalK == k){
+  if(this.readyState == 4){
+    if(xhr != this) return;
+    xhr = null;
+
     data = JSON.parse(this.responseText);
     state = ['wapp_state',this.status,data];
 
