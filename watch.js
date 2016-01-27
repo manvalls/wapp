@@ -6,11 +6,11 @@ var wrap = require('y-walk').wrap,
     path = require('path'),
     fs = require('fs'),
 
-    cache = require('./cache.js'),
-    getConf = require('./getConf.js'),
-    getBr = require('./getBr.js'),
-    packBundles = require('./packBundles.js'),
-    removeDeleted = require('./removeDeleted.js'),
+    cache = require('./utils/cache.js'),
+    getConf = require('./utils/getConf.js'),
+    getBr = require('./utils/getBr.js'),
+    packBundles = require('./utils/packBundles.js'),
+    removeDeleted = require('./utils/removeDeleted.js'),
 
     watch,onPkg;
 

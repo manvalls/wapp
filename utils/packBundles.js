@@ -20,7 +20,7 @@ packES5 = wrap(function*(file,b){
   var src = (yield b) + '',
       cb,i,files;
 
-  fs.readFile(require.resolve('babel-core/browser-polyfill.js'),cb = Cb());
+  fs.readFile(require.resolve('babel-polyfill/dist/polyfill.js'),cb = Cb());
   src = (yield cb) + '\n' + src;
 
   fs.readdir(path.resolve(__dirname,'shims'),cb = Cb());

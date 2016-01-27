@@ -24,7 +24,7 @@ parseDirs = wrap(function*(dir,opt){
 
   }
 
-  yield prepareDir(opt.static = path.resolve(opt.static));
+  yield prepareDir(opt.static = path.resolve(dir,opt.static));
   yield prepareDir(opt.assets = path.resolve(dir,opt.assets));
 
   yield prepareDir(opt.build = path.resolve(dir,opt.build));
@@ -43,7 +43,8 @@ getConf = wrap(function*(dir){
         build: './build',
         scripts: {
           main: './client.js'
-        }
+        },
+        instrument: false
       },
 
       cb,opt;
@@ -60,6 +61,7 @@ getConf = wrap(function*(dir){
   opt.build = opt.build || defaults.build;
   opt.scripts = opt.scripts || defaults.scripts;
   opt.scripts.main = opt.scripts.main || defaults.scripts.main;
+
 
   return yield parseDirs(dir,opt);
 });

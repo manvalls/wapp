@@ -15,12 +15,13 @@ var PathEvent = require('path-event'),
     url = Symbol(),
     origin = Symbol(),
     cookieStr = Symbol(),
-    langMap = Symbol(),
+    data = Symbol(),
 
     maximum = Symbol(),
     resolver = Symbol(),
     emitter = Symbol(),
     name = Symbol(),
+    langMap = Symbol(),
 
     prefix = global.wapp_prefix,
     state = global.wapp_state,
@@ -29,9 +30,7 @@ var PathEvent = require('path-event'),
 
 // app
 
-app = new UrlRewriter();
-Target.call(app,emitter);
-
+app = new UrlRewriter(emitter);
 appEmitter = app[emitter];
 updateMax(app,maximum);
 
@@ -42,6 +41,12 @@ app[define]({
   prefix: prefix,
 
   goTo: function(loc,query,fragment){
+
+    if(typeof query != 'object'){
+      fragment = query;
+      query = null;
+    }
+
     handle(loc,query,fragment);
   },
 
@@ -82,13 +87,12 @@ app[define]({
 
 // Event
 
-function Event(max,p){
-  var langs,i,url,m;
+function Event(max,p,d){
+  var i,url,m;
 
   url = app.compute(getPathname() + location.search + location.hash);
   m = url.match(/([^\?#]*)(?:\?([^#]*))?(?:#(.*))?/);
-
-  PathEvent.call(this,p || m[1],appEmitter,max);
+  this[data] = Object.freeze(d);
 
   this[fragment] = m[3];
   this[rawQuery] = m[2];
@@ -96,11 +100,7 @@ function Event(max,p){
   this[origin] = pct.decode(location.origin);
   this[cookieStr] = document.cookie;
 
-  this[langMap] = new Map();
-  langs = navigator.languages || [navigator.language || navigator.userLanguage];
-
-  for(i = 0;i < langs.length;i++) this[langMap].set(langs[i],1);
-  if(!this[langMap].has('*')) this[langMap].set('*',0);
+  PathEvent.call(this,p || m[1],appEmitter,max);
 
 }
 
@@ -108,6 +108,7 @@ Event.prototype = Object.create(PathEvent.prototype);
 Event.prototype[define]({
 
   constructor: Event,
+  get data(){ return this[data]; },
 
   get fragment(){ return this[fragment]; },
   get rawQuery(){ return this[rawQuery]; },
@@ -152,7 +153,17 @@ Event.prototype[define]({
   },
 
   language: function(lang){
-    if(!lang) return this[langMap].entries();
+    var langs;
+
+    if(!this[langMap]){
+      langs = navigator.languages || [navigator.language || navigator.userLanguage];
+      this[langMap] = new Map();
+
+      for(i = 0;i < langs.length;i++) this[langMap].set(langs[i],1);
+      if(!this[langMap].has('*')) this[langMap].set('*',0);
+    }
+
+    if(!lang) return filter(this[langMap].entries());
     if(this[langMap].has(lang)) return this[langMap].get(lang);
     return this[langMap].get('*');
   },
@@ -164,6 +175,11 @@ Event.prototype[define]({
 });
 
 // - utils
+
+function* filter(it){
+  var entry;
+  for(entry of it) if(entry[1] > 0) yield entry;
+}
 
 function getYielded(script,n){
   if(script[resolver]) return script[resolver].yielded;
@@ -207,24 +223,16 @@ function onPopState(e){
   firstDigit = Math.floor(e.state[1] / 100);
 
   if(firstDigit == 2){
-    ev = new Event(app[maximum]);
-
-    if(e.state[2] instanceof Object) Object.freeze(e.state[2]);
-    ev[define]('data',e.state[2]);
-
-    ev.next();
+    ev = new Event(app[maximum],null,e.state[2]);
+    ev.give();
     return;
   }
 
   if(firstDigit != 4 && firstDigit != 5) code = 400;
   else code = e.state[1];
 
-  ev = new Event(app[maximum],'e/' + code);
-
-  if(e.state[2] instanceof Object) Object.freeze(e.state[2]);
-  ev[define]('data',e.state[2]);
-
-  ev.next();
+  ev = new Event(app[maximum],'e/' + code,e.state[2]);
+  ev.give();
 }
 
 function replaceDots(m){

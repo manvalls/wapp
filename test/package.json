@@ -1,0 +1,8 @@
+{
+  "wapp": {
+    "instrument": true,
+    "scripts": {
+      "foo": "./foo.js"
+    }
+  }
+}

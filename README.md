@@ -47,7 +47,8 @@ var Wapp = require('wapp'),
     server = require('http').createServer().listen(8080),
     app = new Wapp(server,__dirname);
 
-app.on('/*',function([e]){
+app.on('/*',function*(e){
+  yield e.take();
   e.answer('Hello world!');
 });
 ```
@@ -85,6 +86,7 @@ Fired events are [path events](https://www.npmjs.com/package/path-event) which s
 - `response`
 - `sendFile()`
 - `send()`
+- `sendJSON()`
 - `checkOrigin()`
 - `accept()`
 - `charset()`
@@ -99,15 +101,18 @@ var Wapp = require('wapp'),
     server = require('http').createServer().listen(8080),
     app = new Wapp(server,__dirname);
 
-app.on('/foo',function([e]){
+app.on('/foo',function*(e){
+  yield e.take();
   e.answer('bar');
 });
 
-app.on('/*',function([e]){
+app.on('/*',function*(e){
+  yield e.take();
   e.throw(404);
 });
 
-app.on('e/404',function([e]){
+app.on('e/404',function*(e){
+  yield e.take();
   e.answer('Not found');
 });
 ```
@@ -145,15 +150,18 @@ var Wapp = require('wapp'),
     server = require('http').createServer().listen(8080),
     app = new Wapp(server,__dirname);
 
-app.on('/dog',function([e]){
+app.on('/dog',function*(e){
+  yield e.take();
   e.use('animals/dog');
 });
 
-app.on('/',function([e]){
+app.on('/',function*(e){
+  yield e.take();
   e.use('root');
 });
 
-app.on('/*',function([e]){
+app.on('/*',function*(e){
+  yield e.take();
   e.use('default');
 });
 ```
@@ -168,7 +176,8 @@ var app = require('wapp'),
 
 document.body.appendChild(container);
 
-app.on('/*',function([e]){
+app.on('/*',function*(e){
+  yield e.take();
   container.textContent = JSON.stringify(e.data);
 });
 
@@ -183,11 +192,15 @@ var app = require('wapp'),
 
 document.body.appendChild(container);
 
-app.on('/foo',function([e]){
+app.on('/foo',function*(e){
+  yield e.take();
   container.textContent = `foo ${e.data}`;
 });
 
-app.on('e/*',function([e, [code] ]){
+app.on('e/*',function*(e){
+  var [code] = e.argv(1);
+
+  yield e.take();
   container.textContent = `A ${code} error happened! Info: ${e.data}`;
 });
 

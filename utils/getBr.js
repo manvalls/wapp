@@ -6,9 +6,10 @@ var Cb = require('y-callback/node'),
     es5Args = {cache:{}, packageCache: {}},
     es6Args = {cache:{}, packageCache: {}};
 
-function getBr(file,name,watch){
+function getBr(file,name,watch,instrument){
   var browserify = require('browserify'),
       babelify = require('babelify'),
+      es2015 = require('babel-preset-es2015'),
 
       watchify,es5,es6;
 
@@ -25,9 +26,13 @@ function getBr(file,name,watch){
   });
 
   es5.transform(babelify.configure({
-    blacklist: ['strict'],
-    nonStandard: false
+    presets: [es2015]
   }),{global: true});
+
+  if(instrument){
+    es5.transform(require('browserify-istanbul'));
+    es6.transform(require('browserify-istanbul'));
+  }
 
   es5.add(file);
   es6.add(file);

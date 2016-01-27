@@ -1,17 +1,15 @@
 #!/usr/bin/node --harmony
 var path = require('path'),
-    help = require('u-help'),
-
-    Wapp = require('./server.js');
+    help = require('u-help');
 
 switch(process.argv[2]){
 
   case 'build':
-    Wapp.build(path.resolve(process.cwd(),process.argv[3] || ''));
+    require('./build.js')(path.resolve(process.cwd(),process.argv[3] || ''));
     break;
 
   case 'watch':
-    Wapp.watch(path.resolve(process.cwd(),process.argv[3] || ''));
+    require('./watch.js')(path.resolve(process.cwd(),process.argv[3] || ''));
     break;
 
   default:

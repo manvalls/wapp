@@ -3,14 +3,13 @@ var Hsm = require('hsm'),
     Collection = require('detacher/collection'),
     PathEvent = require('path-event'),
     updateMax = require('path-event/updateMax'),
-    Target = require('y-emitter').Target,
     wrap = require('y-walk').wrap,
     UrlRewriter = require('url-rewriter'),
 
     pth = require('path'),
 
-    getConf = require('./server/getConf.js'),
-    fillTemplate = require('./server/fillTemplate.js'),
+    getConf = require('./utils/getConf.js'),
+    fillTemplate = require('./utils/fillTemplate.js'),
 
     error = Symbol(),
     collection = Symbol(),
@@ -36,9 +35,7 @@ function Wapp(server,dir,opt){
 
   dir = dir || process.cwd();
 
-  UrlRewriter.call(this);
-  Target.call(this,emitter);
-
+  UrlRewriter.call(this,emitter);
   this[maximum] = null;
   updateMax(this,maximum);
 
@@ -70,10 +67,8 @@ function Wapp(server,dir,opt){
 
   hsm = new Hsm(server,opt.host);
 
-  this[collection].add( hsm.gh(opt.prefix + '/.scripts/*',onScript,cy,opt.cors) );
-  this[collection].add( hsm.gh(opt.prefix + '/.assets/*',onAssets,cy,opt.cors) );
-  this[collection].add( hsm.gh(
-    opt.prefix + '/*',
+  this[collection].add( hsm.on(
+    'GET ' + opt.prefix + '/*',
     onReq,
     cy,
     opt.gzipLevel,
@@ -105,63 +100,42 @@ Wapp.prototype[define]({
 
 // - utils
 
-function* onScript(a,d,cy,cors){
-  var conf = yield cy,
+function* onReq(he, d, cy, gzipLevel, prefix, w, headers, cors){
+  var pathname = '/' + he.args,
+      path,ev,eCode,conf,m;
 
-      e = a[0],
-      file = a[2];
+  yield he.take();
+  conf = yield cy;
 
-  if(cors && cors.origin) yield e.checkOrigin(cors.origin,cors);
+  path = w.compute(pathname);
+  m = path.match(/^\/.(assets|scripts)\/(.*)/);
 
-  try{ yield e.sendFile(pth.resolve(conf.build,'scripts',file)); }
-  catch(er){
-    e[error] = er;
-    e.next();
-  }
+  if(m){
+    if(cors && cors.origin) yield he.checkOrigin(cors.origin,cors);
 
-}
+    try{
 
-function* onAssets(a,d,cy,cors){
-  var conf = yield cy,
+      yield he.sendFile(
+        m[1] == 'assets' ?
+        pth.resolve(conf.assets,m[2]) :
+        pth.resolve(conf.build,'scripts',m[2])
+      );
 
-      e = a[0],
-      file = a[2];
+    }catch(er){
+      eCode = getCode(er);
+      path = 'e/' + eCode;
+    }
 
-  if(cors && cors.origin) yield e.checkOrigin(cors.origin,cors);
+  }else if(cors && cors.origin) yield he.checkOrigin(cors.origin,cors);
 
-  try{ yield e.sendFile(pth.resolve(conf.assets,file)); }
-  catch(er){
-    e[error] = er;
-    e.next();
-  }
-
-}
-
-function* onReq(a, d, cy, gzipLevel, prefix, w, headers, cors){
-  var conf = yield cy,
-      he = a[0],
-      pathname = '/' + a[2],
-      path,ev,eCode;
-
-  if(he[error]) path = 'e/' + (eCode = getCode(he[error]));
-  else path = pathname;
-
-  path = w.compute(path);
-
-  if(path.indexOf('/.') != -1) return he.next();
-
-  if(cors && cors.origin) yield he.checkOrigin(cors.origin,cors);
-
-  ev = new Event(path,he,conf,gzipLevel,w[emitter],w[maximum],pathname,prefix,headers);
-  ev[error] = eCode;
-  ev.next();
+  if(path.indexOf('/.') != -1) return he.give();
+  ev = new Event(path,he,conf,gzipLevel,w[emitter],w[maximum],pathname,prefix,headers,eCode);
+  ev.give();
 }
 
 // Event
 
-function Event(pth,he,conf,gzipLevel,e,max,pn,pref,headers){
-
-  PathEvent.call(this,pth,e,max);
+function Event(pth,he,conf,gzipLevel,e,max,pn,pref,headers,errorCode){
 
   this[path] = pn;
   this[hsmEvent] = he;
@@ -170,8 +144,10 @@ function Event(pth,he,conf,gzipLevel,e,max,pn,pref,headers){
   this[configuration] = conf;
   this[gzLv] = gzipLevel;
   this[emitter] = e;
+  this[error] = errorCode;
 
   this[globalHeaders] = headers;
+  PathEvent.call(this,pth,e,max);
 
 }
 
@@ -196,7 +172,7 @@ Event.prototype[define]({
 
       }catch(e){ return this.throw(getCode(e)); }
 
-    }else{
+    }else if(he.accept('application/json') < he.accept('text/html') || isLegacy(he)){
 
       he.setCookie({
         wapp_prefix: this[prefix],
@@ -211,6 +187,14 @@ Event.prototype[define]({
         });
 
       }catch(e){ return this.throw(getCode(e)); }
+
+    }else{
+
+      he.response.writeHead(403,{
+        'Cache-Control': 'no-cache'
+      });
+
+      he.response.end();
 
     }
 
@@ -230,7 +214,7 @@ Event.prototype[define]({
       headers: this[globalHeaders].json,
       gzipLevel: gzipLevel
     });
-    else{
+    else if(he.accept('application/json') < he.accept('text/html') || isLegacy(he)){
 
       he.setCookie({
         wapp_prefix: this[prefix],
@@ -243,13 +227,21 @@ Event.prototype[define]({
         gzipLevel: gzipLevel
       });
 
+    }else{
+
+      he.response.writeHead(403,{
+        'Cache-Control': 'no-cache'
+      });
+
+      he.response.end();
+
     }
 
   },
 
   throw: function(code){
     var path = 'e/' + code,
-        ev = new Event(path,this[hsmEvent],this[configuration],this[gzLv],this[emitter],this[emitter].target[maximum],this[path],this[prefix],this[globalHeaders]),
+        ev = new Event(path,this[hsmEvent],this[configuration],this[gzLv],this[emitter],this[emitter].target[maximum],this[path],this[prefix],this[globalHeaders],code),
         firstDigit;
 
     if(typeof code != 'number') code = 500;
@@ -260,8 +252,7 @@ Event.prototype[define]({
       else code = Math.floor(code);
     }
 
-    ev[error] = code;
-    ev.next();
+    ev.give();
   },
 
   get fragment(){ return this[hsmEvent].fragment; },
@@ -307,6 +298,10 @@ Event.prototype[define]({
 
 // - utils
 
+function isLegacy(he){
+  return /MSIE [0-8]\./.test(he.request.headers.accept);
+}
+
 function getCode(e){
 
   switch(e.code){
@@ -321,5 +316,3 @@ function getCode(e){
 /*/ exports /*/
 
 module.exports = Wapp;
-Wapp.build = require('./server/build.js');
-Wapp.watch = require('./server/watch.js');

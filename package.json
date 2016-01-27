@@ -5,24 +5,26 @@
   "main": "main.js",
   "bin": "./bin.js",
   "dependencies": {
-    "babel-core": "^5",
-    "babelify": "^6",
-    "browserify": "^11",
+    "babel-polyfill": "^6.3.14",
+    "babel-preset-es2015": "^6.3.13",
+    "babelify": "^7",
+    "browserify": "^13",
+    "browserify-istanbul": "^0.2.1",
     "chokidar": "^1",
-    "detacher": "^1.4.0",
-    "hsm": "^11.5.0",
-    "nijm": "^1.3.5",
-    "path-event": "^3.1.5",
+    "detacher": "^1.6.2",
+    "hsm": "^12.2.0",
+    "nijm": "^1.4.0",
+    "path-event": "^5.2.2",
     "pct": "^1.1.0",
     "u-help": "^1.0.0",
-    "u-proto": "^5.4.0",
-    "url-rewriter": "^2.0.0",
+    "u-proto": "^5.4.5",
+    "url-rewriter": "^3.0.0",
     "watchify": "^3",
-    "y-callback": "^1.2.1",
-    "y-emitter": "^8.0.1",
-    "y-lock": "^2.0.3",
-    "y-resolver": "^6.1.0",
-    "y-walk": "^10.0.0"
+    "y-callback": "^1.2.2",
+    "y-emitter": "^12.4.0",
+    "y-lock": "^3.0.0",
+    "y-resolver": "^9.1.5",
+    "y-walk": "^10.0.3"
   },
   "repository": {
     "type": "git",
@@ -33,5 +35,10 @@
   },
   "author": "Manuel Valls Fernández <manolo@vlrz.es>",
   "license": "LGPL-3.0",
-  "scripts": {}
+  "scripts": {
+    "test": "u-test"
+  },
+  "devDependencies": {
+    "u-test": "^3.4.0"
+  }
 }
