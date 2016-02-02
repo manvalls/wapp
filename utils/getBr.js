@@ -40,8 +40,8 @@ function getBr(file,name,watch,instrument){
   if(watch){
     watchify = require('watchify');
 
-    es5 = watchify(es5);
-    es6 = watchify(es6);
+    es5.plugin(watchify);
+    es6.plugin(watchify);
   }
 
   return [es5,es6];

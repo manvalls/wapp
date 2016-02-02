@@ -41,10 +41,15 @@ packES6 = wrap(function*(file,b){
   yield writeBoth(file,nijm((yield b) + ''));
 });
 
-packBundles = wrap(function*(name,folder,es5b,es6b,log){
-  var file = path.resolve(folder,name);
+packBundles = wrap(function*(name,folder,es5,es6,log){
+  var file = path.resolve(folder,name),
+      es5b,es6b;
 
   yield lock.take();
+
+  es5b = es5.bundle();
+  es6b = es6.bundle();
+  
   if(log == null) log = true;
 
   if(log){

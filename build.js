@@ -18,7 +18,7 @@ build = wrap(function*(dir,log){
 
   for(i in conf.scripts) if(conf.scripts.hasOwnProperty(i)){
     brs = getBr(conf.scripts[i],i,false,conf.instrument);
-    yield packBundles(i,path.resolve(conf.build,'scripts'),brs[0].bundle(),brs[1].bundle(),log);
+    yield packBundles(i,path.resolve(conf.build,'scripts'),brs[0],brs[1],log);
   }
 
   yield removeDeleted(dir);

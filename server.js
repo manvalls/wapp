@@ -115,7 +115,7 @@ function* onReq(he, d, cy, gzipLevel, prefix, w, headers, cors){
 
     try{
 
-      yield he.sendFile(
+      return yield he.sendFile(
         m[1] == 'assets' ?
         pth.resolve(conf.assets,m[2]) :
         pth.resolve(conf.build,'scripts',m[2])
@@ -128,9 +128,19 @@ function* onReq(he, d, cy, gzipLevel, prefix, w, headers, cors){
 
   }else if(cors && cors.origin) yield he.checkOrigin(cors.origin,cors);
 
-  if(path.indexOf('/.') != -1) return he.give();
-  ev = new Event(path,he,conf,gzipLevel,w[emitter],w[maximum],pathname,prefix,headers,eCode);
-  ev.give();
+  if(he.accept('application/json') == he.accept('text/html') && !isLegacy(he)){
+
+    he.response.writeHead(403,'CSRF detected',{
+      'Cache-Control': 'no-cache'
+    });
+
+    he.response.end();
+
+  }else{
+    ev = new Event(path,he,conf,gzipLevel,w[emitter],w[maximum],pathname,prefix,headers,eCode);
+    ev.give();
+  }
+
 }
 
 // Event
@@ -172,7 +182,7 @@ Event.prototype[define]({
 
       }catch(e){ return this.throw(getCode(e)); }
 
-    }else if(he.accept('application/json') < he.accept('text/html') || isLegacy(he)){
+    }else{
 
       he.setCookie({
         wapp_prefix: this[prefix],
@@ -187,14 +197,6 @@ Event.prototype[define]({
         });
 
       }catch(e){ return this.throw(getCode(e)); }
-
-    }else{
-
-      he.response.writeHead(403,{
-        'Cache-Control': 'no-cache'
-      });
-
-      he.response.end();
 
     }
 
@@ -214,7 +216,7 @@ Event.prototype[define]({
       headers: this[globalHeaders].json,
       gzipLevel: gzipLevel
     });
-    else if(he.accept('application/json') < he.accept('text/html') || isLegacy(he)){
+    else{
 
       he.setCookie({
         wapp_prefix: this[prefix],
@@ -226,14 +228,6 @@ Event.prototype[define]({
         headers: this[globalHeaders].html,
         gzipLevel: gzipLevel
       });
-
-    }else{
-
-      he.response.writeHead(403,{
-        'Cache-Control': 'no-cache'
-      });
-
-      he.response.end();
 
     }
 
@@ -276,8 +270,8 @@ Event.prototype[define]({
   get cookies(){ return this[hsmEvent].cookies; },
   get lastTime(){ return this[hsmEvent].lastTime; },
 
-  setCookie: function(){ this[hsmEvent].setCookie.apply(this[hsmEvent],arguments); },
-  language: function(){ this[hsmEvent].language.apply(this[hsmEvent],arguments); },
+  setCookie: function(){ return this[hsmEvent].setCookie.apply(this[hsmEvent],arguments); },
+  language: function(){ return this[hsmEvent].language.apply(this[hsmEvent],arguments); },
   notModified: function(){
     var he = this[hsmEvent];
 
@@ -286,7 +280,7 @@ Event.prototype[define]({
       wapp_status: this[error] || 200
     });
 
-    he.notModified();
+    return he.notModified();
   },
 
   redirect: function(location,query,fragment,permanent){

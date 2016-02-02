@@ -1,4 +1,4 @@
-# wapp
+# wapp [![Build Status][ci-img]][ci-url] [![Coverage Status][cover-img]][cover-url]
 
 wapp combines a Node.js server and a build system to help you develop single page applications with ease and control, providing a thin layer of abstraction above the HTML5 History API and the XMLHttpRequest object and letting you fill remaining gaps with whatever technology you may like.
 
@@ -69,16 +69,7 @@ The server decides which data corresponds to each URL. The `Wapp` - a subclass o
     - timeout ( *Number* )
     - allowCredentials ( *Boolean* )
 
-If you choose a prefix other than the empty string, your app will be served at `http://yourhost.com <prefix> /`. CORS and host options refer to their [Hsm counterparts](https://www.npmjs.com/package/hsm). If you want wapp to ignore some URLs, include a path segment starting with a dot other than `.` and `..`, e.g:
-
-```
-/my-site/.forum
-/my-site/.blog
-/my-site/foo/.bar
-/my-site/.websockets
-```
-
-All those paths will bypass the wapp server, so that you can host other services of your choice there. Please note that `<prefix>/.assets` and `<prefix>/.build` are reserved for internal usage of wapp. Keep also in mind that these special segments are ignored if they are inside the prefix.
+If you choose a prefix other than the empty string, your app will be served at `http://yourhost.com <prefix> /`. Please note that '<prefix>/.assets/' and '<prefix>/.scripts/' are reserved folders for internal wapp usage. CORS and host options refer to their [Hsm counterparts](https://www.npmjs.com/package/hsm).
 
 Fired events are [path events](https://www.npmjs.com/package/path-event) which share a lot of methods and properties from [Hsm PathEvent extenssions](https://www.npmjs.com/package/hsm). In particular, only these properties and methods are not exposed:
 
@@ -295,3 +286,8 @@ Wapp.watch(__dirname);
 ```
 
 And that's it for now, happy coding!
+
+[ci-img]: https://circleci.com/gh/manvalls/wapp.svg?style=shield
+[ci-url]: https://circleci.com/gh/manvalls/wapp
+[cover-img]: https://coveralls.io/repos/manvalls/wapp/badge.svg?branch=master&service=github
+[cover-url]: https://coveralls.io/github/manvalls/wapp?branch=master

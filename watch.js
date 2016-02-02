@@ -38,7 +38,7 @@ function getPw(conf,dir,log){
   pw.sw = getSw(conf.static,dir,log);
 
   for(i in conf.scripts) if(conf.scripts.hasOwnProperty(i)){
-    wMap[i] = getW(conf.scripts[i],i,path.resolve(conf.build,'scripts'),log);
+    wMap[i] = getW(conf.scripts[i],i,path.resolve(conf.build,'scripts'),log,conf.instrument);
   }
 
   pw.wMap = wMap;
@@ -46,8 +46,8 @@ function getPw(conf,dir,log){
   return pw;
 }
 
-function getW(file,name,folder,log){
-  var brs = getBr(file,name,true);
+function getW(file,name,folder,log,instrument){
+  var brs = getBr(file,name,true,instrument);
 
   brs[0].name = name;
   brs[0].folder = folder;
@@ -56,7 +56,7 @@ function getW(file,name,folder,log){
 
   brs[0].on('update',onUpdate);
 
-  packBundles(name,folder,brs[0].bundle(),brs[1].bundle(),log);
+  packBundles(name,folder,brs[0],brs[1],log);
   return brs;
 }
 
@@ -74,24 +74,18 @@ function closePw(pw){
 }
 
 function onUpdate(){
-  packBundles(this.name,this.folder,this.bundle(),this.other.bundle(),this.log);
+  packBundles(this.name,this.folder,this,this.other,this.log);
 }
 
-watch = wrap(function*(dir,log){
+watch = wrap(function*(dir,log,detacher){
   var conf = yield getConf(dir);
-
-  return new Detacher(closePw,[getPw(conf,dir,log)]);
+  detacher.listen(closePw,[getPw(conf,dir,log)]);
 });
 
 onPkg = wrap(function*(){
   var conf = yield getConf(this.dir),
       keys = new Set(Object.keys(conf.scripts).concat(Object.keys(this.prevConf.scripts))),
       i,cb;
-
-  if(conf.build != this.prevConf.build){
-    fs.rename(this.prevConf.build,conf.build,cb = Cb());
-    yield cb;
-  }
 
   if(conf.static != this.prevConf.static){
     this.sw.close();
@@ -130,4 +124,8 @@ function onStatic(){
 
 /*/ exports /*/
 
-module.exports = watch;
+module.exports = function(dir,log){
+  var det = new Detacher();
+  watch(dir,log,det);
+  return det;
+};

@@ -94,8 +94,8 @@ function Event(max,p,d){
   m = url.match(/([^\?#]*)(?:\?([^#]*))?(?:#(.*))?/);
   this[data] = Object.freeze(d);
 
-  this[fragment] = m[3];
-  this[rawQuery] = m[2];
+  this[fragment] = m[3] == null ? null : m[3];
+  this[rawQuery] = m[2] == null ? null : m[2];
   this[path] = m[1];
   this[origin] = pct.decode(location.origin);
   this[cookieStr] = document.cookie;
@@ -228,7 +228,7 @@ function onPopState(e){
     return;
   }
 
-  if(firstDigit != 4 && firstDigit != 5) code = 400;
+  if(firstDigit != 4 && firstDigit != 5 && e.state[1] != 0) code = 400;
   else code = e.state[1];
 
   ev = new Event(app[maximum],'e/' + code,e.state[2]);
@@ -240,7 +240,7 @@ function replaceDots(m){
 }
 
 function handle(url,query,fragment,replace){
-  var i,qh;
+  var i,qh,old;
 
   if(url.charAt(0) != '/') url = getPathname(document.baseURI).replace(/[^\/]*$/,'') + url;
   url = app.format(url,query,fragment);
@@ -249,7 +249,9 @@ function handle(url,query,fragment,replace){
   url = encodeURI(location.origin + prefix + url);
 
   appEmitter.sun('busy','ready');
+  old = xhr;
   xhr = new XMLHttpRequest();
+  if(old) old.abort();
 
   if(query){
     qh = '';
@@ -261,8 +263,8 @@ function handle(url,query,fragment,replace){
 
   }
 
-  xhr.fromURL = url;
-  xhr.replaceState = replace;
+  xhr.wapp_fromURL = url;
+  xhr.wapp_replaceState = replace;
 
   xhr.onreadystatechange = listener;
   xhr.open('GET',url,true);
@@ -272,18 +274,32 @@ function handle(url,query,fragment,replace){
 }
 
 function listener(){
-  var data,state;
+  var data,state,url,pref,i,m;
 
   if(this.readyState == 4){
     if(xhr != this) return;
     xhr = null;
 
-    data = JSON.parse(this.responseText);
+    try{ data = JSON.parse(this.responseText); }
+    catch(e){ }
+
     state = ['wapp_state',this.status,data];
 
-    if(this.replaceState) history.replaceState(state,'',this.fromURL);
-    else history.pushState(state,'',this.fromURL);
+    if(this.responseURL){
+      pref = location.origin + prefix;
+      i = this.responseURL.indexOf(pref);
 
+      if(i != 0){
+        location.href = this.responseURL;
+        throw new Error('Wrong prefix, reloading...');
+      }
+
+      m = this.wapp_fromURL.match(/#.*$/);
+      url = this.responseURL.slice(pref.length) + (m ? m[0] : '');
+    }else url = this.wapp_fromURL;
+
+    if(this.wapp_replaceState) history.replaceState(state,'',url);
+    else history.pushState(state,'',url);
     onPopState({state: state});
   }
 

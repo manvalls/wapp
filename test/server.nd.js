@@ -3,48 +3,131 @@ var Wapp = require('../main.js'),
     build = require('../build.js'),
     browser = require('u-test/browser'),
     http = require('http'),
+    fs = require('fs'),
     server = http.createServer().listen(8888),
     app = new Wapp(server,__dirname),
-    endpoint;
+    endpoint,watcher;
 
 server.once('listening',function(){
-  build(__dirname,false).listen( () => endpoint = browser('http://localhost:8888/') );
+  try{
+    fs.mkdirSync(__dirname + '/static/dir');
+    fs.writeFileSync(__dirname + '/static/dir/404.json','404');
+  }catch(e){ }
+
+  watcher = watch(__dirname,true);
+  build(__dirname,true).listen(() => {
+    try{
+      fs.unlinkSync(__dirname + '/static/dir/404.json');
+      fs.rmdirSync(__dirname + '/static/dir');
+      fs.writeFileSync(__dirname + '/package.json',`{
+  "wapp": {
+    "instrument": true,
+    "scripts": {
+      "foo": "./foo.js",
+      "fake": "./fake.js"
+    }
+  }
+}
+`);
+
+      setTimeout(()=>fs.writeFileSync(__dirname + '/package.json',`{
+  "wapp": {
+    "instrument": true,
+    "scripts": {
+      "foo": "./foo.js"
+    }
+  }
+}
+`),500);
+    }catch(e){ console.log(e.stack); }
+    endpoint = browser('http://localhost:8888/');
+  });
 });
 
 app.rewrite('/robots.txt','/.assets/robots.txt');
 
-app.on('/',function*(e){
+app.take('/',function*(e){
 
-  yield e.take();
   e.answer({
     testEndpoint: yield endpoint
   });
 
 });
 
-app.on('/detach',function*(e){
-  yield e.take();
+app.take('/detach',function(e){
   e.answer('ok');
+  watcher.detach();
   app.detach();
   server.close();
 });
 
-app.on('/static',function*(e){
-  yield e.take();
+app.take('/static',function(e){
   e.use('hi');
 });
 
-app.on('/static2',function*(e){
-  yield e.take();
+app.take('/static404',function(e){
+  e.use('dir/404');
+});
+
+app.take('/cookies',function(e){
+  e.setCookie({server: 'cookie'});
+  e.answer(e.cookies);
+});
+
+app.take('/query',function(e){
+  e.answer(e.query);
+});
+
+app.take('/error',function(e){
+  e.throw(400);
+});
+
+app.take('/prefix',function(e){
+  if(e.lastTime > new Date(0)) return e.notModified();
+  e.answer(app.prefix);
+});
+
+app.take('/static2',function(e){
   e.use('es/test');
 });
 
-app.on('/*',function*(e){
-  yield e.take();
+app.take('/url',function(e){
+
+  e.answer({
+    url: e.url,
+    fragment: e.fragment,
+    rawQuery: e.rawQuery,
+    path: e.path
+  });
+
+});
+
+app.take('/origin',function(e){
+  e.answer(e.origin);
+});
+
+app.take('/language',function(e){
+  e.answer(e.language().next().value[0]);
+});
+
+app.take('/redirect',function(e){
+  e.redirect('/static');
+});
+
+app.take('/asset',function(e){
+  e.answer(app.asset(e.query.asset));
+});
+
+app.take('/e500',function(e){
+  var obj = {};
+  obj.self = obj;
+  e.answer(obj);
+});
+
+app.take('/*',function(e){
   e.answer('default');
 });
 
-app.on('e/*',function*(e){
-  yield e.take();
+app.take('e/*',function(e){
   e.answer('NOO');
 });
