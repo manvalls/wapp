@@ -22,9 +22,11 @@ var PathEvent = require('path-event'),
     emitter = Symbol(),
     name = Symbol(),
     langMap = Symbol(),
+    changeYd = Symbol(),
 
     prefix = global.wapp_prefix,
     state = global.wapp_state,
+    stateChange = new Resolver(),
 
     xhr,app,appEmitter;
 
@@ -99,6 +101,7 @@ function Event(max,p,d){
   this[path] = m[1];
   this[origin] = pct.decode(location.origin);
   this[cookieStr] = document.cookie;
+  this[changeYd] = stateChange.yielded;
 
   PathEvent.call(this,p || m[1],appEmitter,max);
 
@@ -114,6 +117,7 @@ Event.prototype[define]({
   get rawQuery(){ return this[rawQuery]; },
   get query(){ return query(this); },
   get path(){ return this[path]; },
+  changed: function(){ return this[changeYd]; },
   get url(){
     var he,p,q,f;
 
@@ -205,7 +209,7 @@ function onScriptError(e){
 }
 
 function onPopState(e){
-  var ev,firstDigit,code;
+  var ev,firstDigit,code,sc;
 
   if(xhr){
     xhr.abort();
@@ -223,16 +227,22 @@ function onPopState(e){
   firstDigit = Math.floor(e.state[1] / 100);
 
   if(firstDigit == 2){
+    sc = stateChange;
+    stateChange = new Resolver();
     ev = new Event(app[maximum],null,e.state[2]);
     ev.give();
+    sc.accept();
     return;
   }
 
   if(firstDigit != 4 && firstDigit != 5 && e.state[1] != 0) code = 400;
   else code = e.state[1];
 
+  sc = stateChange;
+  stateChange = new Resolver();
   ev = new Event(app[maximum],'e/' + code,e.state[2]);
   ev.give();
+  sc.accept();
 }
 
 function replaceDots(m){

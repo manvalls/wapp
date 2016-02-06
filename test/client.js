@@ -10,7 +10,7 @@ app.take('/',function*(e){
   __U_TEST_REMOTE__ = e.data.testEndpoint;
 
   yield t('Static',function*(){
-    var e,yd,txt,res;
+    var e,pe,yd,txt,res;
 
     app.goTo('/static',{foo: 'bar'},'foo');
     e = yield app.until('/static');
@@ -85,7 +85,7 @@ app.take('/',function*(e){
   });
 
   yield t('Assets',function*(){
-    var res;
+    var res,pe;
 
     res = yield fetch('/robots.txt');
     assert.strictEqual((yield res.text()).trim(),'hi :)');
@@ -96,8 +96,10 @@ app.take('/',function*(e){
     assert.strictEqual(app.asset('./foo/../robots'),'http://localhost:8888/.assets/foo/robots');
 
     app.goTo('/asset',{asset: '/./../foo/../robots'});
+    pe = e;
     e = yield app.until('/asset');
     assert.strictEqual(e.data,'/.assets/robots');
+    yield pe.changed();
   });
 
   yield t('app.load',function*(){
