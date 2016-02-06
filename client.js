@@ -224,25 +224,23 @@ function onPopState(e){
     typeof e.state[1] != 'number'
   ) return handle(getPathname() + location.search + location.hash,null,null,true);
 
+  sc = stateChange;
+  stateChange = new Resolver();
+  sc.accept();
+
   firstDigit = Math.floor(e.state[1] / 100);
 
   if(firstDigit == 2){
-    sc = stateChange;
-    stateChange = new Resolver();
     ev = new Event(app[maximum],null,e.state[2]);
     ev.give();
-    sc.accept();
     return;
   }
 
   if(firstDigit != 4 && firstDigit != 5 && e.state[1] != 0) code = 400;
   else code = e.state[1];
-
-  sc = stateChange;
-  stateChange = new Resolver();
+  
   ev = new Event(app[maximum],'e/' + code,e.state[2]);
   ev.give();
-  sc.accept();
 }
 
 function replaceDots(m){

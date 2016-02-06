@@ -12,12 +12,12 @@
     "browserify-istanbul": "^0.2.1",
     "chokidar": "^1.4.2",
     "detacher": "^1.6.2",
-    "hsm": "^13.1.4",
+    "hsm": "^13.2.0",
     "nijm": "^1.4.0",
     "path-event": "^6.0.1",
     "pct": "^1.1.0",
     "u-help": "^1.0.0",
-    "u-proto": "^5.4.5",
+    "u-proto": "^6.1.0",
     "url-rewriter": "^3.1.0",
     "watchify": "^3.7.0",
     "y-callback": "^1.2.2",
@@ -39,6 +39,6 @@
     "test": "u-test"
   },
   "devDependencies": {
-    "u-test": "^3.6.5"
+    "u-test": "^3.6.6"
   }
 }
