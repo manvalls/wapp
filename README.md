@@ -23,17 +23,15 @@ That being said, wapp is centered around one single thing: the URL. Each time it
 
 ## Configuration
 
-Applications developed with wapp may be configured by placing a `package.json` file at the project root, e.g:
+Applications developed with wapp may be configured by placing an `app.json` file at the project root, e.g:
 
 ```json
 {
-  "wapp": {
-    "static": "./static",
-    "assets": "./assets",
-    "build": "./build",
-    "scripts": {
-      "main": "./client.js"
-    }
+  "static": "./static",
+  "assets": "./assets",
+  "build": "./build",
+  "scripts": {
+    "main": "./client.js"
   }
 }
 ```
@@ -240,14 +238,12 @@ img.src = a('/images/test.png');
 document.body.appendChild(img);
 ```
 
-You can also use relative URLs. Now it's dynamic script loading's turn. Your client is bundled ahead of time into a single script, but you may want to load some parts of it dynamically. Previously you've seen how you can define your scripts in your `package.json`, but until now you've only been able to use your `main` script. Well, you're about to know how to load the rest of them. Suppose you have the following `package.json`:
+You can also use relative URLs. Now it's dynamic script loading's turn. Your client is bundled ahead of time into a single script, but you may want to load some parts of it dynamically. Previously you've seen how you can define your scripts in your `app.json`, but until now you've only been able to use your `main` script. Well, you're about to know how to load the rest of them. Suppose you have the following `app.json`:
 
 ```json
 {
-  "wapp": {
-    "scripts": {
-      "test": "./test.js"
-    }
+  "scripts": {
+    "test": "./test.js"
   }
 }
 ```

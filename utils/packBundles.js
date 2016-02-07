@@ -49,7 +49,7 @@ packBundles = wrap(function*(name,folder,es5,es6,log){
 
   es5b = es5.bundle();
   es6b = es6.bundle();
-  
+
   if(log == null) log = true;
 
   if(log){
@@ -68,12 +68,12 @@ packBundles = wrap(function*(name,folder,es5,es6,log){
       packES6(file + '.js',es6b)
     ];
 
-    if(log) console.log('\u001b[92m✓\u001b[0m');
+    if(log) console.log('\u001b[32m✓\u001b[0m');
 
   }catch(e){
 
     if(log){
-      console.log('\u001b[91m✗\u001b[0m\n');
+      console.log('\u001b[31m✗\u001b[0m\n');
 
       e = e.errors[0] || e.errors[1];
       if(e.codeFrame && e.filename){

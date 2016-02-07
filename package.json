@@ -24,6 +24,7 @@
     "y-emitter": "^12.4.0",
     "y-lock": "^3.1.0",
     "y-resolver": "^9.1.5",
+    "y-setter": "^5.2.0",
     "y-walk": "^10.0.3"
   },
   "repository": {

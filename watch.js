@@ -27,7 +27,7 @@ function getSw(staticDir,dir,log){
 }
 
 function getPw(conf,dir,log){
-  var pw = chokidar.watch(path.resolve(dir,'package.json')),
+  var pw = chokidar.watch(path.resolve(dir,'app.json')),
       wMap = {},
       brs,i;
 
@@ -99,9 +99,6 @@ onPkg = wrap(function*(){
       if(this.wMap[i]){
         this.wMap[i][0].close();
         this.wMap[i][1].close();
-
-        this.wMap[i][0].removeListener('update',onUpdate);
-
         delete this.wMap[i];
       }
 

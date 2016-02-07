@@ -19,23 +19,19 @@ server.once('listening',function(){
     try{
       fs.unlinkSync(__dirname + '/static/dir/404.json');
       fs.rmdirSync(__dirname + '/static/dir');
-      fs.writeFileSync(__dirname + '/package.json',`{
-  "wapp": {
-    "instrument": true,
-    "scripts": {
-      "foo": "./foo.js",
-      "fake": "./fake.js"
-    }
+      fs.writeFileSync(__dirname + '/app.json',`{
+  "instrument": true,
+  "scripts": {
+    "foo": "./foo.js",
+    "fake": "./fake.js"
   }
 }
 `);
 
-      setTimeout(()=>fs.writeFileSync(__dirname + '/package.json',`{
-  "wapp": {
-    "instrument": true,
-    "scripts": {
-      "foo": "./foo.js"
-    }
+      setTimeout(()=>fs.writeFileSync(__dirname + '/app.json',`{
+  "instrument": true,
+  "scripts": {
+    "foo": "./foo.js"
   }
 }
 `),500);

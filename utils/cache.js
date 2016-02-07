@@ -59,12 +59,12 @@ cacheFolder = wrap(function*(folder,from,to,log){
         yield writeBoth(destination,data);
         yield writeBoth(path.resolve(to,relative + '.html'),fillTemplate(data));
 
-        if(log) console.log('\u001b[92m✓\u001b[0m');
+        if(log) console.log('\u001b[32m✓\u001b[0m');
 
       }catch(e){
 
         if(log){
-          console.log('\u001b[91m✗\u001b[0m');
+          console.log('\u001b[31m✗\u001b[0m');
           console.log('\n' + e.message + '\n');
         }
 

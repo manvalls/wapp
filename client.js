@@ -5,6 +5,7 @@ var PathEvent = require('path-event'),
     Resolver = require('y-resolver'),
     pct = require('pct'),
     UrlRewriter = require('url-rewriter'),
+    Setter = require('y-setter'),
 
     query = require('hsm/Event/query'),
     cookies = require('hsm/Event/cookies'),
@@ -16,6 +17,7 @@ var PathEvent = require('path-event'),
     origin = Symbol(),
     cookieStr = Symbol(),
     data = Symbol(),
+    routes = Symbol(),
 
     maximum = Symbol(),
     resolver = Symbol(),
@@ -38,6 +40,7 @@ updateMax(app,maximum);
 
 appEmitter.sun('ready','busy');
 
+app[routes] = new Map();
 app[define]({
 
   prefix: prefix,
@@ -83,9 +86,36 @@ app[define]({
     if(url.charAt(0) != '/') url = getPathname(document.baseURI).replace(/[^\/]*$/,'') + url;
     url = app.format(url);
     return encodeURI(location.origin + prefix + '/.assets' + url);
+  },
+
+  route: function(route){
+    var setter;
+
+    if(this[routes].has(route)) return this[routes].get(route).getter;
+    setter = new Setter(null);
+    this[routes].set(route,{
+      getter: setter.getter,
+      detacher: this.on(route,onRoute,setter)
+    });
+
+    return setter.getter;
+  },
+
+  detachRoute: function(route){
+    if(!this[routes].has(route)) return;
+    this[routes].get(route).detacher.detach();
+    this[routes].delete(route);
   }
 
 });
+
+// - handlers
+
+function* onRoute(e,d,setter){
+  setter.value = e;
+  yield e.changed();
+  if(setter.value == e) setter.value = null;
+}
 
 // Event
 
@@ -226,21 +256,21 @@ function onPopState(e){
 
   sc = stateChange;
   stateChange = new Resolver();
-  sc.accept();
-
   firstDigit = Math.floor(e.state[1] / 100);
 
   if(firstDigit == 2){
     ev = new Event(app[maximum],null,e.state[2]);
     ev.give();
+    sc.accept();
     return;
   }
 
   if(firstDigit != 4 && firstDigit != 5 && e.state[1] != 0) code = 400;
   else code = e.state[1];
-  
+
   ev = new Event(app[maximum],'e/' + code,e.state[2]);
   ev.give();
+  sc.accept();
 }
 
 function replaceDots(m){

@@ -35,7 +35,7 @@ parseDirs = wrap(function*(dir,opt){
 });
 
 getConf = wrap(function*(dir){
-  var pkg = path.resolve(dir,'package.json'),
+  var pkg = path.resolve(dir,'app.json'),
 
       defaults = {
         static: './static',
@@ -52,9 +52,6 @@ getConf = wrap(function*(dir){
   fs.readFile(pkg,cb = Cb());
   try{ opt = JSON.parse((yield cb) + ''); }
   catch(e){ return yield parseDirs(dir,defaults); }
-
-  if(!opt.wapp) return yield parseDirs(dir,defaults);
-  opt = opt.wapp;
 
   opt.static = opt.static || defaults.static;
   opt.assets = opt.assets || defaults.assets;

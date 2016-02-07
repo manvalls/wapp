@@ -193,6 +193,28 @@ app.take('/',function*(e){
     assert.strictEqual(e.data.toLowerCase(),e.language().next().value[0].toLowerCase());
   });
 
+  yield t('app.route()',function*(){
+    var getter = app.route('/route/*'),
+        e;
+
+    assert.strictEqual(getter.value,null);
+    assert.strictEqual(getter,app.route('/route/*'));
+
+    app.goTo('/route/1');
+    e = yield app.until('/route/1');
+    yield e.take();
+    assert.strictEqual(getter.value.common,e.common);
+
+    app.goTo('/route/2');
+    e = yield app.until('/route/2');
+    yield e.take();
+    assert.strictEqual(getter.value.common,e.common);
+
+    app.goTo('/default');
+    yield e.changed();
+    assert.strictEqual(getter.value,null);
+  });
+
 });
 
 app.trigger();
