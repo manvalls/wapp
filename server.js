@@ -1,6 +1,6 @@
 var Hsm = require('hsm'),
     define = require('u-proto/define'),
-    Collection = require('detacher/collection'),
+    Detacher = require('detacher'),
     PathEvent = require('path-event'),
     updateMax = require('path-event/updateMax'),
     wrap = require('y-walk').wrap,
@@ -12,7 +12,7 @@ var Hsm = require('hsm'),
     fillTemplate = require('./utils/fillTemplate.js'),
 
     error = Symbol(),
-    collection = Symbol(),
+    detacher = Symbol(),
     maximum = Symbol(),
     emitter = Symbol(),
 
@@ -63,11 +63,11 @@ function Wapp(server,dir,opt){
   headers.html['Cache-Control'] = headers.json['Cache-Control'] = 'no-cache';
 
   cy = getConf(dir);
-  this[collection] = new Collection();
+  this[detacher] = new Detacher();
 
   hsm = new Hsm(server,opt.host);
 
-  this[collection].add( hsm.on(
+  this[detacher].add( hsm.on(
     'GET ' + opt.prefix + '/*',
     onReq,
     cy,
@@ -86,7 +86,7 @@ Wapp.prototype[define]({
   constructor: Wapp,
 
   detach: function(){
-    this[collection].detach();
+    this[detacher].detach();
   },
 
   get prefix(){ return this[prefix]; },
