@@ -18,6 +18,7 @@ var PathEvent = require('path-event'),
     cookieStr = Symbol(),
     data = Symbol(),
     routes = Symbol(),
+    routed = Symbol(),
 
     maximum = Symbol(),
     resolver = Symbol(),
@@ -112,6 +113,8 @@ app[define]({
 // - handlers
 
 function* onRoute(e,d,setter){
+  if(e[routed]) return;
+  e[routed] = true;
   setter.value = e;
   yield e.changed();
   if(setter.value == e) setter.value = null;
