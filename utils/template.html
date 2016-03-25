@@ -68,11 +68,8 @@ try{
     eval('const myConst = 5');
     eval('class Foo{}');
 
-    if(true){
-      function blockFn(){}
-    }
+    eval('if(true){ function blockFn(){} } if(typeof blockFn != "undefined") throw new Error();');
 
-    if(typeof blockFn != 'undefined') throw new Error();
   })();
 
   window.wapp_mode = 'ES6';
