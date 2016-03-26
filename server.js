@@ -60,7 +60,7 @@ function Wapp(server,dir,opt){
 
   }
 
-  headers.html['Cache-Control'] = headers.json['Cache-Control'] = 'no-cache';
+  headers.html['Vary'] = headers.json['Vary'] = 'Accept';
 
   cy = getConf(dir);
   this[detacher] = new Detacher();
@@ -131,7 +131,7 @@ function* onReq(he, d, cy, gzipLevel, prefix, w, headers, cors){
   if(he.accept('application/json') == he.accept('text/html') && !isLegacy(he)){
 
     he.response.writeHead(403,'CSRF detected',{
-      'Cache-Control': 'no-cache'
+      'Vary': 'Accept'
     });
 
     he.response.end();
