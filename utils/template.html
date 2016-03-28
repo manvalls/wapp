@@ -9,7 +9,8 @@ try{ (function(){
   var JSONdata = {{data}},
       status = parseInt(decodeURIComponent(document.cookie.match(
         /(?:^\s*?|.*?;\s*?)wapp_status\s*=\s*(.*?)(?:\s*;|$)/
-      )[1]));
+      )[1])),
+      state;
 
   window.wapp_prefix = decodeURIComponent(document.cookie.match(
     /(?:^\s*?|.*?;\s*?)wapp_prefix\s*=\s*(.*?)(?:\s*;|$)/
@@ -18,8 +19,14 @@ try{ (function(){
   document.cookie = 'wapp_prefix=;Expires=Sat, 29 Aug 2015 14:18:05 GMT';
   document.cookie = 'wapp_status=;Expires=Sat, 29 Aug 2015 14:18:05 GMT';
 
-  if(window.history) history.replaceState(['wapp_state',status,JSONdata],'',location.href);
-  else window.wapp_state = ['wapp_state',status,JSONdata];
+  state = {
+    wappState: true,
+    statusCode: status,
+    data: JSONdata
+  };
+
+  if(window.history) history.replaceState(state,'',location.href);
+  else window.wapp_state = state;
 
 })(); }catch(e){
   location.reload(true);
@@ -42,6 +49,7 @@ try{
   test = eval('a => a + 1');
   test = eval('function* test(){}');
   eval('test = {[1 + 2]: 3, foo(){ return \'bar\';}, test}');
+  eval('[test] = [1]');
 
   test = eval('0o644');
   if(test != 420) throw new Error();

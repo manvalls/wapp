@@ -89,11 +89,11 @@ app.take('/',function*(e){
 
     res = yield fetch('/robots.txt');
     assert.strictEqual((yield res.text()).trim(),'hi :)');
-    assert.strictEqual(app.asset('/./../foo/../robots'),'http://localhost:8888/.assets/robots');
+    assert.strictEqual(app.asset('/./../foo/../robots'),location.origin + '/.assets/robots');
 
     app.goTo('/foo/bar');
     e = yield app.until('/foo/bar');
-    assert.strictEqual(app.asset('./foo/../robots'),'http://localhost:8888/.assets/foo/robots');
+    assert.strictEqual(app.asset('./foo/../robots'),location.origin + '/.assets/foo/robots');
 
     app.goTo('/asset',{asset: '/./../foo/../robots'});
     pe = e;

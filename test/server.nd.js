@@ -4,7 +4,7 @@ var Wapp = require('../main.js'),
     browser = require('u-test/browser'),
     http = require('http'),
     fs = require('fs'),
-    server = http.createServer().listen(8888),
+    server = http.createServer().listen(0),
     app = new Wapp(server,__dirname),
     endpoint,watcher;
 
@@ -36,7 +36,7 @@ server.once('listening',function(){
 }
 `),500);
     }catch(e){ console.log(e.stack); }
-    endpoint = browser('http://localhost:8888/');
+    endpoint = browser('http://localhost:' + server.address().port);
   });
 });
 

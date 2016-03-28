@@ -248,27 +248,24 @@ function onPopState(e){
 
   appEmitter.sun('ready','busy');
 
-  if(
-    !(e.state instanceof Array) ||
-    e.state[0] != 'wapp_state' ||
-    typeof e.state[1] != 'number'
-  ) return handle(getPathname() + location.search + location.hash,null,null,true);
+  if(!(e.state && e.state.wappState === true))
+    return handle(getPathname() + location.search + location.hash,null,null,true);
 
   sc = stateChange;
   stateChange = new Resolver();
-  firstDigit = Math.floor(e.state[1] / 100);
+  firstDigit = Math.floor(e.state.statusCode / 100);
 
   if(firstDigit == 2){
-    ev = new Event(app[maximum],null,e.state[2]);
+    ev = new Event(app[maximum],null,e.state.data);
     ev.give();
     sc.accept();
     return;
   }
 
-  if(firstDigit != 4 && firstDigit != 5 && e.state[1] != 0) code = 400;
-  else code = e.state[1];
+  if(firstDigit != 4 && firstDigit != 5 && e.state.statusCode != 0) code = 400;
+  else code = e.state.statusCode;
 
-  ev = new Event(app[maximum],'e/' + code,e.state[2]);
+  ev = new Event(app[maximum],'e/' + code,e.state.data);
   ev.give();
   sc.accept();
 }
@@ -321,7 +318,11 @@ function listener(){
     try{ data = JSON.parse(this.responseText); }
     catch(e){ }
 
-    state = ['wapp_state',this.status,data];
+    state = {
+      wappState: true,
+      statusCode: this.status,
+      data: data
+    };
 
     if(this.responseURL){
       pref = location.origin + prefix;
