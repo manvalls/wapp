@@ -29,6 +29,7 @@ var PathEvent = require('path-event'),
     prefix = global.wapp_prefix,
     state = global.wapp_state,
     stateChange = new Resolver(),
+    tasks = [],
 
     xhr,app,appEmitter;
 
@@ -44,6 +45,25 @@ app[routes] = new Map();
 app[define]({
 
   prefix: prefix,
+
+  task: function(){
+    var task = new Resolver.Hybrid();
+
+    tasks.push(task);
+
+    if(global.history){
+
+      history.pushState({
+        wappState: true,
+        index: tasks.length
+      },'',location.href);
+
+      task.listen(cleanTask,[tasks.length - 1]);
+
+    }
+
+    return task;
+  },
 
   goTo: function(loc,query,fragment){
 
@@ -110,6 +130,17 @@ app[define]({
 });
 
 // - handlers
+
+function cleanTask(index){
+  var rest,task,state;
+
+  if(this != tasks[index]) return;
+  rest = tasks.splice(index);
+
+  if(global.history) state = global.history.state;
+  for(task of rest) task.accept();
+  if(global.history && state == global.history.state) history.back();
+}
 
 function* onRoute(e,d,setter){
   setter.value = e;
@@ -239,17 +270,26 @@ function onScriptError(e){
 }
 
 function onPopState(e){
-  var ev,firstDigit,code,sc;
+  var ev,firstDigit,code,sc,task,state;
 
   if(xhr){
     xhr.abort();
     xhr = null;
   }
 
-  appEmitter.sun('ready','busy');
-
   if(!(e.state && e.state.wappState === true))
     return handle(getPathname() + location.search + location.hash,null,null,true);
+
+  task = tasks[e.state.index];
+  state = e.state;
+
+  if(task && !task.done) task.accept();
+  else if(!('statusCode' in e.state)){
+    history.back();
+    return;
+  }
+
+  if(state != e.state || !('statusCode' in e.state)) return;
 
   sc = stateChange;
   stateChange = new Resolver();
@@ -259,6 +299,8 @@ function onPopState(e){
     ev = new Event(app[maximum],null,e.state.data);
     ev.give();
     sc.accept();
+
+    if(!xhr) appEmitter.sun('ready','busy');
     return;
   }
 
@@ -268,6 +310,8 @@ function onPopState(e){
   ev = new Event(app[maximum],'e/' + code,e.state.data);
   ev.give();
   sc.accept();
+
+  if(!xhr) appEmitter.sun('ready','busy');
 }
 
 function replaceDots(m){
@@ -283,7 +327,6 @@ function handle(url,query,fragment,replace){
   url = url.replace(/^[^#\?]*/,replaceDots);
   url = encodeURI(location.origin + prefix + url);
 
-  appEmitter.sun('busy','ready');
   old = xhr;
   xhr = new XMLHttpRequest();
   if(old) old.abort();
@@ -306,6 +349,8 @@ function handle(url,query,fragment,replace){
   xhr.setRequestHeader('Accept','application/json');
   if(qh) xhr.setRequestHeader('Query',qh);
   xhr.send();
+
+  appEmitter.sun('busy','ready');
 }
 
 function listener(){
@@ -321,6 +366,7 @@ function listener(){
     state = {
       wappState: true,
       statusCode: this.status,
+      index: tasks.length,
       data: data
     };
 
