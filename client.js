@@ -139,7 +139,7 @@ function cleanTask(index){
 
   if(global.history) state = global.history.state;
   for(task of rest) task.accept();
-  if(global.history && state == global.history.state) history.back();
+  if(global.history && state == global.history.state && state.index != index) history.back();
 }
 
 function* onRoute(e,d,setter){
