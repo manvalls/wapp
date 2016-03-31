@@ -222,31 +222,24 @@ app.take('/',function*(e){
     t2 = app.task();
 
     t1.accept();
-    console.log(0);
     yield t1;
-    console.log(1);
     yield t2;
 
     t1 = app.task();
     t2 = app.task();
 
     history.go(-2);
-    console.log(2);
     yield t1;
-    console.log(3);
     yield t2;
 
     t1 = app.task();
     t2 = app.task();
 
     history.back();
-    console.log(4);
     yield t2;
 
     history.back();
-    console.log(5);
     yield t1;
-    console.log(6);
 
   });
 
