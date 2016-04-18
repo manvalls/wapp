@@ -1,4 +1,5 @@
-# wapp [![Build Status][ci-img]][ci-url] [![Coverage Status][cover-img]][cover-url]
+# wapp
+[![Build Status][ci-img]][ci-url] [![Coverage Status][cover-img]][cover-url]
 
 wapp combines a Node.js server and a build system to help you develop single page applications with ease and control, providing a thin layer of abstraction above the HTML5 History API and the XMLHttpRequest object and letting you fill remaining gaps with whatever technology you may like.
 
