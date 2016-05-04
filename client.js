@@ -125,6 +125,15 @@ app[define]({
     if(!this[routes].has(route)) return;
     this[routes].get(route).detacher.detach();
     this[routes].delete(route);
+  },
+
+  get title(){
+    return document.title;
+  },
+
+  set title(title){
+    document.title = title;
+    if(window.history) history.replaceState(history.state,document.title,location.href);
   }
 
 });
@@ -139,7 +148,20 @@ function cleanTask(index){
 
   if(global.history) state = global.history.state;
   for(task of rest) task.accept();
-  if(global.history && state == global.history.state && state.index != index) history.back();
+  if(global.history && state == global.history.state && state.index != index){
+
+    history.back();
+    state = history.state;
+
+    history.replaceState({
+      wappState: true,
+      index: -1
+    },'',location.href);
+
+    history.pushState(state,'',location.href);
+
+  }
+
 }
 
 function* onRoute(e,d,setter){

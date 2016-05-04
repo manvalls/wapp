@@ -126,6 +126,12 @@ app.take('/',function*(e){
     assert.strictEqual(e.language('foo-bar'),0);
   });
 
+  t('Title',function(){
+    app.title = 'foo';
+    assert.strictEqual(document.title,app.title);
+    assert.strictEqual(document.title,'foo');
+  });
+
   yield t('Cookies',function*(){
     var e;
 
@@ -212,6 +218,12 @@ app.take('/',function*(e){
 
     app.goTo('/default');
     yield e.changed();
+    assert.strictEqual(getter.value,null);
+
+    app.detachRoute('/route/*');
+    app.goTo('/route/1');
+    e = yield app.until('/route/1');
+    yield e.take();
     assert.strictEqual(getter.value,null);
   });
 
