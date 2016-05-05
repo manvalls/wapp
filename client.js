@@ -30,6 +30,7 @@ var PathEvent = require('path-event'),
     state = global.wapp_state,
     stateChange = new Resolver(),
     tasks = [],
+    nextId = 0,
 
     xhr,app,appEmitter;
 
@@ -55,8 +56,9 @@ app[define]({
 
       history.pushState({
         wappState: true,
-        index: tasks.length
-      },'',location.href);
+        index: tasks.length,
+        id: nextId = (nextId + 1) % 1e15
+      },document.title,location.href);
 
       task.listen(cleanTask,[tasks.length - 1]);
 
@@ -146,22 +148,14 @@ function cleanTask(index){
   if(this != tasks[index]) return;
   rest = tasks.splice(index);
 
-  if(global.history) state = global.history.state;
-  for(task of rest) task.accept();
-  if(global.history && state == global.history.state && state.index != index){
-
-    history.back();
+  if(global.history){
+    history.go(-rest.length);
     state = history.state;
-
-    history.replaceState({
-      wappState: true,
-      index: -1
-    },'',location.href);
-
-    history.pushState(state,'',location.href);
-
+    history.go(-1);
+    history.pushState(state,document.title,location.href);
   }
 
+  for(task of rest) task.accept();
 }
 
 function* onRoute(e,d,setter){
@@ -292,7 +286,7 @@ function onScriptError(e){
 }
 
 function onPopState(e){
-  var ev,firstDigit,code,sc,task,state;
+  var ev,firstDigit,code,sc,task;
 
   if(xhr){
     xhr.abort();
@@ -302,16 +296,18 @@ function onPopState(e){
   if(!(e.state && e.state.wappState === true))
     return handle(getPathname() + location.search + location.hash,null,null,true);
 
+  if(global.history && e.state.id != history.state.id) return;
   task = tasks[e.state.index];
-  state = e.state;
 
-  if(task && !task.done) task.accept();
-  else if(!('statusCode' in e.state)){
-    history.back();
+  if(task){
+    task.accept();
     return;
   }
 
-  if(state != e.state || !('statusCode' in e.state)) return;
+  if(!('statusCode' in e.state)){
+    history.back();
+    return;
+  }
 
   sc = stateChange;
   stateChange = new Resolver();
@@ -386,6 +382,7 @@ function listener(){
     catch(e){ }
 
     state = {
+      id: nextId = (nextId + 1) % 1e15,
       wappState: true,
       statusCode: this.status,
       index: tasks.length,
@@ -405,9 +402,10 @@ function listener(){
       url = this.responseURL.slice(pref.length) + (m ? m[0] : '');
     }else url = this.wapp_fromURL;
 
-    if(this.wapp_replaceState) history.replaceState(state,'',url);
-    else history.pushState(state,'',url);
-    onPopState({state: state});
+    if(tasks[0]) tasks[0].accept();
+    if(this.wapp_replaceState) history.replaceState(state,document.title,url);
+    else history.pushState(state,document.title,url);
+    onPopState(history);
   }
 
 }

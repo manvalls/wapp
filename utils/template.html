@@ -23,11 +23,20 @@ try{ (function(){
     wappState: true,
     statusCode: status,
     index: 0,
+    id: 0,
     data: JSONdata
   };
 
-  if(window.history) history.replaceState(state,'',location.href);
-  else window.wapp_state = state;
+  if(window.history){
+
+    history.replaceState({
+      wappState: true,
+      index: -1
+    },'',location.href);
+
+    history.pushState(state,'',location.href);
+
+  }else window.wapp_state = state;
 
 })(); }catch(e){
   location.reload(true);
