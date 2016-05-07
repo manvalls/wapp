@@ -12,8 +12,7 @@ try{ (function(){
       )[1])),
       state,reloaded;
 
-  reloaded = !!((window.history || {}).state || {}).ts;
-  window.wapp_ts = reloaded ? history.state.ts : (new Date()).getTime();
+  reloaded = !!((window.history || {}).state || {}).wappState;
   window.wapp_prefix = decodeURIComponent(document.cookie.match(
     /(?:^\s*?|.*?;\s*?)wapp_prefix\s*=\s*(.*?)(?:\s*;|$)/
   )[1]);
@@ -23,7 +22,6 @@ try{ (function(){
 
   state = {
     statusCode: status,
-    ts: window.wapp_ts,
     wappState: true,
     data: JSONdata,
     index: 0,
@@ -31,7 +29,10 @@ try{ (function(){
   };
 
   if(window.history){
-    if(!reloaded) history.replaceState(state,'',location.href);
+    if(reloaded){
+      if(history.state.index == -1) window.wapp_forward = true;
+      else if('statusCode' in history.state) history.replaceState(state,'',location.href);
+    }else history.replaceState(state,'',location.href);
   }else window.wapp_state = state;
 
 })(); }catch(e){

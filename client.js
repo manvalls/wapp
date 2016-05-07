@@ -28,7 +28,6 @@ var PathEvent = require('path-event'),
 
     prefix = global.wapp_prefix,
     state = global.wapp_state,
-    ts = global.wapp_ts,
     history = global.history,
     stateChange = new Resolver(),
     tasks = [],
@@ -36,11 +35,11 @@ var PathEvent = require('path-event'),
     lastHref = location.href,
     nextId = lastState.id,
     ignore = false,
+    clean = false,
     gap = false,
     leap = 0,
     queue = [],
-    cleaningQueue = [],
-    handleQueue = [],
+    goFwd = !!global.wapp_forward,
 
     go,back,forward,pushState,replaceState,
     lto,xhr,app,appEmitter;
@@ -48,15 +47,32 @@ var PathEvent = require('path-event'),
 // Take control of history
 
 function resolve(){
-  var l,args;
+  var l,elem;
 
   if(ignore) return;
 
-  while(args = cleaningQueue.shift()) cleanTask.call(...args);
-  while(args = queue.shift()) pushState.apply(history,args);
-  while(args = handleQueue.shift()) handle(...args);
-  if(!leap) return;
+  while(elem = queue.shift()){
 
+    switch(elem.kind){
+      case 'push':
+        pushState.apply(history,elem.args);
+        break;
+      case 'replace':
+        replaceState.apply(history,elem.args);
+        break;
+      case 'clean':
+        cleanTask.call(...elem.args);
+        break;
+      case 'handle':
+        handle(...elem.args);
+        break;
+    }
+
+    if(ignore) return;
+
+  }
+
+  if(!leap) return;
   l = leap;
   leap = 0;
   go.call(history,l);
@@ -85,12 +101,22 @@ if(history){
   };
 
   history.pushState = function(state,title,href){
-    handleQueue.push([href,{},'']);
+
+    queue.push({
+      kind: 'handle',
+      args: [href,{},'']
+    });
+
     history.go(0);
   };
 
   history.replaceState = function(state,title,href){
-    handleQueue.push([href,{},'',true]);
+
+    queue.push({
+      kind: 'handle',
+      args: [href,{},'',true]
+    });
+
     history.go(0);
   };
 
@@ -122,31 +148,39 @@ app[define]({
         gap = true;
         state = history.state;
 
-        replaceState.call(history,{
-          wappState: true,
-          id: ++nextId,
-          index: -1,
-          ts: ts
-        },document.title,location.href);
+        queue.push({
+          kind: 'replace',
+          args: [{
+            wappState: true,
+            id: ++nextId,
+            index: -1,
+            gap: true
+          },document.title,location.href]
+        });
 
-        pushState.call(history,state,document.title,location.href);
+        queue.push({
+          kind: 'push',
+          args: [state,document.title,location.href]
+        });
 
       }
 
       state = {
         wappState: true,
         index: tasks.length,
-        id: ++nextId,
-        ts: ts
+        id: ++nextId
       };
 
-      queue.push([state,document.title,location.href]);
-      clearTimeout(lto);
-      lto = setTimeout(resolve,0);
+      queue.push({
+        kind: 'push',
+        args: [state,document.title,location.href]
+      });
+
+      history.go(0);
 
     }
 
-    task.listen(cleanTask,[tasks.length - 1]);
+    task.listen(enqueueCleanTask,[tasks.length - 1]);
     return task;
   },
 
@@ -157,7 +191,11 @@ app[define]({
       query = null;
     }
 
-    handleQueue.push([loc,query,fragment]);
+    queue.push({
+      kind: 'handle',
+      args: [loc,query,fragment]
+    });
+
     history.go(0);
   },
 
@@ -226,13 +264,18 @@ app[define]({
 
 // - handlers
 
+function enqueueCleanTask(index){
+
+  queue.push({
+    kind: 'clean',
+    args: [this,index]
+  });
+
+  history.go(0);
+}
+
 function cleanTask(index){
   var rest,task,n;
-
-  if(ignore){
-    cleaningQueue.push([this,index]);
-    return;
-  }
 
   if(this != tasks[index]) return;
   rest = tasks.splice(index);
@@ -242,7 +285,11 @@ function cleanTask(index){
     if(index != history.state.index) n -= rest.length;
 
     ignore = true;
-    queue.push([lastState,document.title,location.href]);
+    queue.push({
+      kind: 'push',
+      args: [lastState,document.title,location.href]
+    });
+
     go.call(history,n);
   }
 
@@ -341,7 +388,12 @@ Event.prototype[define]({
   },
 
   redirect: function(loc,query,fragment){
-    handleQueue.push([loc,query,fragment,true]);
+
+    queue.push({
+      kind: 'handle',
+      args: [loc,query,fragment,true]
+    });
+
     history.go(0);
   }
 
@@ -378,15 +430,18 @@ function onScriptError(e){
 }
 
 function onPopState(e){
-  var ev,firstDigit,code,sc,task;
+  var fwd = goFwd,
+      ev,firstDigit,code,sc,task;
 
-  if(xhr){
-    xhr.abort();
-    xhr = null;
-  }
+  goFwd = false;
 
   if(!(e.state && e.state.wappState === true)){
-    handleQueue.push([getPathname() + location.search + location.hash,null,null,true]);
+
+    queue.push({
+      kind: 'handle',
+      args: [getPathname() + location.search + location.hash,null,null,true]
+    });
+
     history.go(0);
     return;
   }
@@ -394,12 +449,6 @@ function onPopState(e){
   if(ignore){
     ignore = false;
     resolve();
-    return;
-  }
-
-  if(!e.state.id && e.state.ts != ts){
-    if(!lastState.id) forward.call(history);
-    else back.call(history);
     return;
   }
 
@@ -411,15 +460,30 @@ function onPopState(e){
   }
 
   if(!('statusCode' in e.state)){
-    back.call(history);
+
+    if(fwd) forward.call(history);
+    else{
+      clean = true;
+      back.call(history);
+    }
+
     return;
   }
 
-  lastState = e.state;
+  if(xhr){
+    xhr.abort();
+    xhr = null;
+  }
 
+  lastState = e.state;
   sc = stateChange;
   stateChange = new Resolver();
   firstDigit = Math.floor(e.state.statusCode / 100);
+
+  if(clean){
+    clean = false;
+    app.task().accept();
+  }
 
   if(firstDigit == 2){
     ev = new Event(app[maximum],null,e.state.data);
@@ -495,8 +559,7 @@ function listener(){
       wappState: true,
       statusCode: this.status,
       index: tasks.length,
-      data: data,
-      ts: ts
+      data: data
     };
 
     if(this.responseURL){
