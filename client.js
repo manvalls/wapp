@@ -28,11 +28,73 @@ var PathEvent = require('path-event'),
 
     prefix = global.wapp_prefix,
     state = global.wapp_state,
+    ts = global.wapp_ts,
+    history = global.history,
     stateChange = new Resolver(),
     tasks = [],
-    nextId = 0,
+    lastState = state || (history || {}).state,
+    lastHref = location.href,
+    nextId = lastState.id,
+    ignore = false,
+    gap = false,
+    leap = 0,
+    queue = [],
+    cleaningQueue = [],
+    handleQueue = [],
 
-    xhr,app,appEmitter;
+    go,back,forward,pushState,replaceState,
+    lto,xhr,app,appEmitter;
+
+// Take control of history
+
+function resolve(){
+  var l,args;
+
+  if(ignore) return;
+
+  while(args = cleaningQueue.shift()) cleanTask.call(...args);
+  while(args = queue.shift()) pushState.apply(history,args);
+  while(args = handleQueue.shift()) handle(...args);
+  if(!leap) return;
+
+  l = leap;
+  leap = 0;
+  go.call(history,l);
+}
+
+if(history){
+
+  go = history.go;
+  forward = history.forward;
+  back = history.back;
+  pushState = history.pushState;
+  replaceState = history.replaceState;
+
+  history.go = function(n){
+    leap += n;
+    clearTimeout(lto);
+    lto = setTimeout(resolve,0);
+  };
+
+  history.forward = function(){
+    history.go(1);
+  };
+
+  history.back = function(){
+    history.go(-1);
+  };
+
+  history.pushState = function(state,title,href){
+    handleQueue.push([href,{},'']);
+    history.go(0);
+  };
+
+  history.replaceState = function(state,title,href){
+    handleQueue.push([href,{},'',true]);
+    history.go(0);
+  };
+
+}
 
 // app
 
@@ -48,22 +110,43 @@ app[define]({
   prefix: prefix,
 
   task: function(){
-    var task = new Resolver.Hybrid();
+    var task = new Resolver.Hybrid(),
+        state;
 
     tasks.push(task);
 
-    if(global.history){
+    if(history){
 
-      history.pushState({
+      if(!(history.state || {}).id && !gap){
+
+        gap = true;
+        state = history.state;
+
+        replaceState.call(history,{
+          wappState: true,
+          id: ++nextId,
+          index: -1,
+          ts: ts
+        },document.title,location.href);
+
+        pushState.call(history,state,document.title,location.href);
+
+      }
+
+      state = {
         wappState: true,
         index: tasks.length,
-        id: nextId = (nextId + 1) % 1e15
-      },document.title,location.href);
+        id: ++nextId,
+        ts: ts
+      };
 
-      task.listen(cleanTask,[tasks.length - 1]);
+      queue.push([state,document.title,location.href]);
+      clearTimeout(lto);
+      lto = setTimeout(resolve,0);
 
     }
 
+    task.listen(cleanTask,[tasks.length - 1]);
     return task;
   },
 
@@ -74,11 +157,12 @@ app[define]({
       query = null;
     }
 
-    handle(loc,query,fragment);
+    handleQueue.push([loc,query,fragment]);
+    history.go(0);
   },
 
   trigger: function(){
-    if(global.history) onPopState(history);
+    if(history) onPopState(history);
     else onPopState({state: state});
   },
 
@@ -135,7 +219,7 @@ app[define]({
 
   set title(title){
     document.title = title;
-    if(window.history) history.replaceState(history.state,document.title,location.href);
+    if(history) replaceState.call(history,history.state,document.title,location.href);
   }
 
 });
@@ -143,16 +227,23 @@ app[define]({
 // - handlers
 
 function cleanTask(index){
-  var rest,task,state;
+  var rest,task,n;
+
+  if(ignore){
+    cleaningQueue.push([this,index]);
+    return;
+  }
 
   if(this != tasks[index]) return;
   rest = tasks.splice(index);
 
-  if(global.history){
-    history.go(-rest.length);
-    state = history.state;
-    history.go(-1);
-    history.pushState(state,document.title,location.href);
+  if(history){
+    n = -1;
+    if(index != history.state.index) n -= rest.length;
+
+    ignore = true;
+    queue.push([lastState,document.title,location.href]);
+    go.call(history,n);
   }
 
   for(task of rest) task.accept();
@@ -250,7 +341,8 @@ Event.prototype[define]({
   },
 
   redirect: function(loc,query,fragment){
-    handle(loc,query,fragment,true);
+    handleQueue.push([loc,query,fragment,true]);
+    history.go(0);
   }
 
 });
@@ -293,10 +385,24 @@ function onPopState(e){
     xhr = null;
   }
 
-  if(!(e.state && e.state.wappState === true))
-    return handle(getPathname() + location.search + location.hash,null,null,true);
+  if(!(e.state && e.state.wappState === true)){
+    handleQueue.push([getPathname() + location.search + location.hash,null,null,true]);
+    history.go(0);
+    return;
+  }
 
-  if(global.history && e.state.id != history.state.id) return;
+  if(ignore){
+    ignore = false;
+    resolve();
+    return;
+  }
+
+  if(!e.state.id && e.state.ts != ts){
+    if(!lastState.id) forward.call(history);
+    else back.call(history);
+    return;
+  }
+
   task = tasks[e.state.index];
 
   if(task){
@@ -305,9 +411,11 @@ function onPopState(e){
   }
 
   if(!('statusCode' in e.state)){
-    history.back();
+    back.call(history);
     return;
   }
+
+  lastState = e.state;
 
   sc = stateChange;
   stateChange = new Resolver();
@@ -368,6 +476,7 @@ function handle(url,query,fragment,replace){
   if(qh) xhr.setRequestHeader('Query',qh);
   xhr.send();
 
+  if(tasks[0]) tasks[0].accept();
   appEmitter.sun('busy','ready');
 }
 
@@ -382,11 +491,12 @@ function listener(){
     catch(e){ }
 
     state = {
-      id: nextId = (nextId + 1) % 1e15,
+      id: this.wapp_replaceState ? lastState.id : ++nextId,
       wappState: true,
       statusCode: this.status,
       index: tasks.length,
-      data: data
+      data: data,
+      ts: ts
     };
 
     if(this.responseURL){
@@ -402,9 +512,8 @@ function listener(){
       url = this.responseURL.slice(pref.length) + (m ? m[0] : '');
     }else url = this.wapp_fromURL;
 
-    if(tasks[0]) tasks[0].accept();
-    if(this.wapp_replaceState) history.replaceState(state,document.title,url);
-    else history.pushState(state,document.title,url);
+    if(this.wapp_replaceState) replaceState.call(history,state,document.title,url);
+    else pushState.call(history,state,document.title,url);
     onPopState(history);
   }
 
@@ -424,7 +533,7 @@ function getPathname(p){
   return p.slice(prefix.length);
 }
 
-if(global.history) addEventListener('popstate',onPopState);
+if(history) addEventListener('popstate',onPopState);
 
 /*/ exports /*/
 

@@ -9,6 +9,35 @@ app.take('/',function*(e){
 
   __U_TEST_REMOTE__ = e.data.testEndpoint;
 
+  yield t('app.task()',function*(){
+    var t1,t2;
+
+    t1 = app.task();
+    t2 = app.task();
+
+    t1.accept();
+    yield t1;
+    yield t2;
+
+    t1 = app.task();
+    t2 = app.task();
+
+    history.go(-3);
+    history.forward();
+    yield t1;
+    yield t2;
+
+    t1 = app.task();
+    t2 = app.task();
+
+    history.back();
+    yield t2;
+
+    history.back();
+    yield t1;
+
+  });
+
   yield t('Static',function*(){
     var e,pe,yd,txt,res;
 
@@ -28,7 +57,7 @@ app.take('/',function*(e){
     assert.strictEqual(e.fragment,'foo');
 
     app.goTo('/static2');
-    app.goTo('/static');
+    history.pushState('','','/static');
     e = yield app.until('/static');
     e.redirect('/static2');
     e = yield app.until('/static2');
@@ -225,34 +254,6 @@ app.take('/',function*(e){
     e = yield app.until('/route/1');
     yield e.take();
     assert.strictEqual(getter.value,null);
-  });
-
-  yield t('app.task()',function*(){
-    var t1,t2;
-
-    t1 = app.task();
-    t2 = app.task();
-
-    t1.accept();
-    yield t1;
-    yield t2;
-
-    t1 = app.task();
-    t2 = app.task();
-
-    history.go(-2);
-    yield t1;
-    yield t2;
-
-    t1 = app.task();
-    t2 = app.task();
-
-    history.back();
-    yield t2;
-
-    history.back();
-    yield t1;
-
   });
 
 });

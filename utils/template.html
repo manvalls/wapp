@@ -10,8 +10,10 @@ try{ (function(){
       status = parseInt(decodeURIComponent(document.cookie.match(
         /(?:^\s*?|.*?;\s*?)wapp_status\s*=\s*(.*?)(?:\s*;|$)/
       )[1])),
-      state;
+      state,reloaded;
 
+  reloaded = !!((window.history || {}).state || {}).ts;
+  window.wapp_ts = reloaded ? history.state.ts : (new Date()).getTime();
   window.wapp_prefix = decodeURIComponent(document.cookie.match(
     /(?:^\s*?|.*?;\s*?)wapp_prefix\s*=\s*(.*?)(?:\s*;|$)/
   )[1]);
@@ -20,22 +22,16 @@ try{ (function(){
   document.cookie = 'wapp_status=;Expires=Sat, 29 Aug 2015 14:18:05 GMT';
 
   state = {
-    wappState: true,
     statusCode: status,
+    ts: window.wapp_ts,
+    wappState: true,
+    data: JSONdata,
     index: 0,
-    id: 0,
-    data: JSONdata
+    id: reloaded ? history.state.id : 0
   };
 
   if(window.history){
-
-    history.replaceState({
-      wappState: true,
-      index: -1
-    },'',location.href);
-
-    history.pushState(state,'',location.href);
-
+    if(!reloaded) history.replaceState(state,'',location.href);
   }else window.wapp_state = state;
 
 })(); }catch(e){
