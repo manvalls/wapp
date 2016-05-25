@@ -1,7 +1,8 @@
 var app = require('../main.js'),
     t = require('u-test'),
     assert = require('assert'),
-    walk = require('y-walk');
+    walk = require('y-walk'),
+    wait = require('y-timers/wait');
 
 // Tests
 
@@ -21,11 +22,10 @@ app.take('/',function*(e){
 
     t1 = app.task();
     t2 = app.task();
-
-    history.go(-3);
-    history.forward();
-    yield t1;
+    history.back();
     yield t2;
+    history.back();
+    yield t1;
 
     t1 = app.task();
     t2 = app.task();
@@ -33,6 +33,22 @@ app.take('/',function*(e){
     history.back();
     yield t2;
 
+    history.back();
+    yield t1;
+
+    t1 = app.task();
+    t2 = app.task();
+    history.back();
+
+    yield t2;
+    assert(!t1.done);
+
+    t2 = app.task();
+    history.back();
+    yield t2;
+
+    yield wait(100);
+    assert(!t1.done);
     history.back();
     yield t1;
 
@@ -57,13 +73,8 @@ app.take('/',function*(e){
     assert.strictEqual(e.fragment,'foo');
 
     app.goTo('/static2');
-    history.pushState('','','/static');
+    app.goTo('/static');
     e = yield app.until('/static');
-    e.redirect('/static2');
-    e = yield app.until('/static2');
-    yd = app.until('/static2');
-    history.back();
-    yield yd;
 
     app.goTo('/static404');
     yield app.until('e/404');

@@ -28,99 +28,15 @@ var PathEvent = require('path-event'),
 
     prefix = global.wapp_prefix,
     state = global.wapp_state,
-    history = global.history,
     stateChange = new Resolver(),
     tasks = [],
-    lastState = state || (history || {}).state,
-    lastHref = location.href,
-    nextId = lastState.id,
-    ignore = false,
-    clean = false,
-    gap = false,
-    leap = 0,
-    queue = [],
-    goFwd = !!global.wapp_forward,
 
-    go,back,forward,pushState,replaceState,
-    lto,xhr,app,appEmitter;
-
-// Take control of history
-
-function resolve(){
-  var l,elem;
-
-  if(ignore) return;
-
-  while(elem = queue.shift()){
-
-    switch(elem.kind){
-      case 'push':
-        pushState.apply(history,elem.args);
-        break;
-      case 'replace':
-        replaceState.apply(history,elem.args);
-        break;
-      case 'clean':
-        cleanTask.call(...elem.args);
-        break;
-      case 'handle':
-        handle(...elem.args);
-        break;
-    }
-
-    if(ignore) return;
-
-  }
-
-  if(!leap) return;
-  l = leap;
-  leap = 0;
-  go.call(history,l);
-}
-
-if(history){
-
-  go = history.go;
-  forward = history.forward;
-  back = history.back;
-  pushState = history.pushState;
-  replaceState = history.replaceState;
-
-  history.go = function(n){
-    leap += n;
-    clearTimeout(lto);
-    lto = setTimeout(resolve,0);
-  };
-
-  history.forward = function(){
-    history.go(1);
-  };
-
-  history.back = function(){
-    history.go(-1);
-  };
-
-  history.pushState = function(state,title,href){
-
-    queue.push({
-      kind: 'handle',
-      args: [href,{},'']
-    });
-
-    history.go(0);
-  };
-
-  history.replaceState = function(state,title,href){
-
-    queue.push({
-      kind: 'handle',
-      args: [href,{},'',true]
-    });
-
-    history.go(0);
-  };
-
-}
+    sessionStorage = window.sessionStorage || {},
+    head = 'AKY8Y0efKHe40NQ',
+    wappState = 'F267zopcHHbUvVC',
+    lastState = state || (global.history || {}).state,
+    fromPH = false,
+    xhr,app,appEmitter;
 
 // app
 
@@ -136,51 +52,24 @@ app[define]({
   prefix: prefix,
 
   task: function(){
-    var task = new Resolver.Hybrid(),
-        state;
+    var task = new Resolver.Hybrid();
 
     tasks.push(task);
+    task.listen(clean);
 
-    if(history){
+    if(global.history && history.state && !(history.state || {}).placeholder){
 
-      if(!(history.state || {}).id && !gap){
+      sessionStorage[head] = history.state.ts = Date.now();
+      history.replaceState(history.state,document.title,location.href);
 
-        gap = true;
-        state = history.state;
-
-        queue.push({
-          kind: 'replace',
-          args: [{
-            wappState: true,
-            id: ++nextId,
-            index: -1,
-            gap: true
-          },document.title,location.href]
-        });
-
-        queue.push({
-          kind: 'push',
-          args: [state,document.title,location.href]
-        });
-
-      }
-
-      state = {
-        wappState: true,
-        index: tasks.length,
-        id: ++nextId
-      };
-
-      queue.push({
-        kind: 'push',
-        args: [state,document.title,location.href]
-      });
-
-      history.go(0);
+      fromPH = true;
+      history.pushState({
+        [wappState]: true,
+        placeholder: true
+      },document.title,location.href);
 
     }
 
-    task.listen(enqueueCleanTask,[tasks.length - 1]);
     return task;
   },
 
@@ -191,17 +80,11 @@ app[define]({
       query = null;
     }
 
-    queue.push({
-      kind: 'handle',
-      args: [loc,query,fragment]
-    });
-
-    history.go(0);
+    handle(loc,query,fragment);
   },
 
   trigger: function(){
-    if(history) onPopState(history);
-    else onPopState({state: state});
+    onPopState({state: lastState});
   },
 
   load: function(script){
@@ -257,43 +140,19 @@ app[define]({
 
   set title(title){
     document.title = title;
-    if(history) replaceState.call(history,history.state,document.title,location.href);
+    if(global.history) history.replaceState(history.state,document.title,location.href);
   }
 
 });
 
 // - handlers
 
-function enqueueCleanTask(index){
+function clean(){
+  var i = tasks.indexOf(this),
+      task;
 
-  queue.push({
-    kind: 'clean',
-    args: [this,index]
-  });
-
-  history.go(0);
-}
-
-function cleanTask(index){
-  var rest,task,n;
-
-  if(this != tasks[index]) return;
-  rest = tasks.splice(index);
-
-  if(history){
-    n = -1;
-    if(index != history.state.index) n -= rest.length;
-
-    ignore = true;
-    queue.push({
-      kind: 'push',
-      args: [lastState,document.title,location.href]
-    });
-
-    go.call(history,n);
-  }
-
-  for(task of rest) task.accept();
+  if(i == -1) return;
+  for(task of tasks.splice(i)) task.accept();
 }
 
 function* onRoute(e,d,setter){
@@ -385,16 +244,6 @@ Event.prototype[define]({
     if(!lang) return filter(this[langMap].entries());
     if(this[langMap].has(lang)) return this[langMap].get(lang);
     return this[langMap].get('*');
-  },
-
-  redirect: function(loc,query,fragment){
-
-    queue.push({
-      kind: 'handle',
-      args: [loc,query,fragment,true]
-    });
-
-    history.go(0);
   }
 
 });
@@ -430,78 +279,75 @@ function onScriptError(e){
 }
 
 function onPopState(e){
-  var fwd = goFwd,
-      ev,firstDigit,code,sc,task;
-
-  goFwd = false;
-
-  if(!(e.state && e.state.wappState === true)){
-
-    queue.push({
-      kind: 'handle',
-      args: [getPathname() + location.search + location.hash,null,null,true]
-    });
-
-    history.go(0);
-    return;
-  }
-
-  if(ignore){
-    ignore = false;
-    resolve();
-    return;
-  }
-
-  task = tasks[e.state.index];
-
-  if(task){
-    task.accept();
-    return;
-  }
-
-  if(!('statusCode' in e.state)){
-
-    if(fwd) forward.call(history);
-    else{
-      clean = true;
-      back.call(history);
-    }
-
-    return;
-  }
+  var fph = fromPH,
+      ev,firstDigit,code,sc,task,state;
 
   if(xhr){
     xhr.abort();
     xhr = null;
   }
 
-  lastState = e.state;
-  sc = stateChange;
-  stateChange = new Resolver();
-  firstDigit = Math.floor(e.state.statusCode / 100);
+  appEmitter.sun('ready','busy');
 
-  if(clean){
-    clean = false;
-    app.task().accept();
-  }
+  if(global.history) state = history.state;
+  else state = e.state;
 
-  if(firstDigit == 2){
-    ev = new Event(app[maximum],null,e.state.data);
-    ev.give();
-    sc.accept();
+  if(!(state && state[wappState] === true))
+    return handle(getPathname() + location.search + location.hash,null,null,true);
 
-    if(!xhr) appEmitter.sun('ready','busy');
+  fromPH = false;
+  if(state.skip) return;
+
+  if(state.placeholder){
+    if(global.history) history.back();
     return;
   }
 
-  if(firstDigit != 4 && firstDigit != 5 && e.state.statusCode != 0) code = 400;
-  else code = e.state.statusCode;
+  if(task = tasks.pop()){
 
-  ev = new Event(app[maximum],'e/' + code,e.state.data);
+    fromPH = true;
+    history.pushState({
+      [wappState]: true,
+      placeholder: true
+    },document.title,location.href);
+
+    task.accept();
+    return;
+  }
+
+  if(state.ts && state.ts == sessionStorage[head]){
+
+    if(fph){
+      history.back();
+      return;
+    }
+
+    fromPH = true;
+    history.pushState({
+      [wappState]: true,
+      placeholder: true
+    },document.title,location.href);
+
+  }
+
+  sc = stateChange;
+  lastState = state;
+  stateChange = new Resolver();
+  firstDigit = Math.floor(state.statusCode / 100);
+
+  if(firstDigit == 2){
+    ev = new Event(app[maximum],null,state.data);
+    ev.give();
+    sc.accept();
+    return;
+  }
+
+  if(firstDigit != 4 && firstDigit != 5 && state.statusCode != 0) code = 400;
+  else code = state.statusCode;
+
+  ev = new Event(app[maximum],'e/' + code,state.data);
   ev.give();
   sc.accept();
-
-  if(!xhr) appEmitter.sun('ready','busy');
 }
 
 function replaceDots(m){
@@ -517,6 +363,7 @@ function handle(url,query,fragment,replace){
   url = url.replace(/^[^#\?]*/,replaceDots);
   url = encodeURI(location.origin + prefix + url);
 
+  appEmitter.sun('busy','ready');
   old = xhr;
   xhr = new XMLHttpRequest();
   if(old) old.abort();
@@ -539,9 +386,6 @@ function handle(url,query,fragment,replace){
   xhr.setRequestHeader('Accept','application/json');
   if(qh) xhr.setRequestHeader('Query',qh);
   xhr.send();
-
-  if(tasks[0]) tasks[0].accept();
-  appEmitter.sun('busy','ready');
 }
 
 function listener(){
@@ -555,10 +399,8 @@ function listener(){
     catch(e){ }
 
     state = {
-      id: this.wapp_replaceState ? lastState.id : ++nextId,
-      wappState: true,
+      [wappState]: true,
       statusCode: this.status,
-      index: tasks.length,
       data: data
     };
 
@@ -575,9 +417,10 @@ function listener(){
       url = this.responseURL.slice(pref.length) + (m ? m[0] : '');
     }else url = this.wapp_fromURL;
 
-    if(this.wapp_replaceState) replaceState.call(history,state,document.title,url);
-    else pushState.call(history,state,document.title,url);
-    onPopState(history);
+    if(this.wapp_replaceState || (history.state && history.state.placeholder))
+      history.replaceState(state,document.title,url);
+    else history.pushState(state,document.title,url);
+    onPopState({state: state});
   }
 
 }
@@ -596,7 +439,7 @@ function getPathname(p){
   return p.slice(prefix.length);
 }
 
-if(history) addEventListener('popstate',onPopState);
+if(global.history) addEventListener('popstate',onPopState);
 
 /*/ exports /*/
 
