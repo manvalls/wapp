@@ -185,8 +185,8 @@ Event.prototype[define]({
     }else{
 
       he.setCookie({
-        wapp_prefix: this[prefix],
-        wapp_status: status
+        ['AR9CVdhVmrgQhE8']: this[prefix],
+        ['xEu07Sej0MGuwKs']: status
       });
 
       try{
@@ -219,8 +219,8 @@ Event.prototype[define]({
     else{
 
       he.setCookie({
-        wapp_prefix: this[prefix],
-        wapp_status: status
+        ['AR9CVdhVmrgQhE8']: this[prefix],
+        ['xEu07Sej0MGuwKs']: status
       });
 
       he.send(fillTemplate(jsonData),{
@@ -276,8 +276,8 @@ Event.prototype[define]({
     var he = this[hsmEvent];
 
     if(he.accept('application/json') <= he.accept('text/html')) he.setCookie({
-      wapp_prefix: this[prefix],
-      wapp_status: this[error] || 200
+      ['AR9CVdhVmrgQhE8']: this[prefix],
+      ['xEu07Sej0MGuwKs']: this[error] || 200
     });
 
     return he.notModified();

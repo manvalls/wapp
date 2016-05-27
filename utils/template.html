@@ -8,21 +8,26 @@
 try{ (function(){
   var JSONdata = {{data}},
       status = parseInt(decodeURIComponent(document.cookie.match(
-        /(?:^\s*?|.*?;\s*?)wapp_status\s*=\s*(.*?)(?:\s*;|$)/
+        /(?:^\s*?|.*?;\s*?)xEu07Sej0MGuwKs\s*=\s*(.*?)(?:\s*;|$)/
       )[1])),
       state;
 
-  window.wapp_prefix = decodeURIComponent(document.cookie.match(
-    /(?:^\s*?|.*?;\s*?)wapp_prefix\s*=\s*(.*?)(?:\s*;|$)/
+  window['AR9CVdhVmrgQhE8'] = decodeURIComponent(document.cookie.match(
+    /(?:^\s*?|.*?;\s*?)AR9CVdhVmrgQhE8\s*=\s*(.*?)(?:\s*;|$)/
   )[1]);
 
-  document.cookie = 'wapp_prefix=;Expires=Sat, 29 Aug 2015 14:18:05 GMT';
-  document.cookie = 'wapp_status=;Expires=Sat, 29 Aug 2015 14:18:05 GMT';
+  document.cookie = 'AR9CVdhVmrgQhE8=;Expires=Sat, 29 Aug 2015 14:18:05 GMT';
+  document.cookie = 'xEu07Sej0MGuwKs=;Expires=Sat, 29 Aug 2015 14:18:05 GMT';
 
   if(window.history && history.state && history.state['F267zopcHHbUvVC'] && history.state.placeholder){
 
     history.back();
-    
+    window['uh1UgnboEnnYzpV'] = {
+      'F267zopcHHbUvVC': true,
+      statusCode: status,
+      data: JSONdata
+    };
+
     state = {
       'F267zopcHHbUvVC': true,
       skip: true
@@ -35,7 +40,7 @@ try{ (function(){
   };
 
   if(window.history) history.replaceState(state,document.title,location.href);
-  else window.wapp_state = state;
+  else window['vsx2uwNm7hmbshB'] = state;
 
 })(); }catch(e){
   location.reload(true);
@@ -90,12 +95,12 @@ try{
   })();
 
   window.wapp_mode = 'ES6';
-  document.write('<script id="wapp_script_main" src="' + wapp_prefix + '/.scripts/main.js"></s'+'cript>');
+  document.write('<script id="wapp_script_main" src="' + AR9CVdhVmrgQhE8 + '/.scripts/main.js"></s'+'cript>');
 
 }catch(e){
 
   window.wapp_mode = 'ES5';
-  document.write('<script id="wapp_script_main" src="' + wapp_prefix + '/.scripts/main.es5.js"></s'+'cript>');
+  document.write('<script id="wapp_script_main" src="' + AR9CVdhVmrgQhE8 + '/.scripts/main.es5.js"></s'+'cript>');
   console.warn('You\'re using a shitty browser');
 
 }

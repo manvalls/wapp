@@ -26,8 +26,9 @@ var PathEvent = require('path-event'),
     langMap = Symbol(),
     changeYd = Symbol(),
 
-    prefix = global.wapp_prefix,
-    state = global.wapp_state,
+    prefix = global['AR9CVdhVmrgQhE8'],
+    state = global['vsx2uwNm7hmbshB'],
+    reload = global['uh1UgnboEnnYzpV'],
     stateChange = new Resolver(),
     tasks = [],
 
@@ -320,6 +321,13 @@ function onPopState(e){
     if(fph){
       history.back();
       return;
+    }
+
+    if(reload){
+      state = reload;
+      reload = null;
+      state.ts = sessionStorage[head] = Date.now();
+      history.replaceState(state,document.title,location.href);
     }
 
     fromPH = true;
