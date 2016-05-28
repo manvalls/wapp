@@ -23,7 +23,7 @@
     "y-callback": "^1.2.3",
     "y-emitter": "^12.4.2",
     "y-lock": "^3.1.0",
-    "y-resolver": "^9.2.1",
+    "y-resolver": "^9.2.2",
     "y-setter": "^6.5.1",
     "y-walk": "^10.0.5"
   },

@@ -92,7 +92,7 @@ app[define]({
     var tag,scr,yd;
 
     script = (script || '').toLowerCase().replace(/\W/g,'');
-    tag = 'wapp_script_' + script;
+    tag = 'tfbn0jc14vb9nha' + script;
 
     if(global.hasOwnProperty(tag)) return Resolver.accept(global[tag]);
     if(scr = document.getElementById(tag)) return getYielded(scr,script);
@@ -270,7 +270,7 @@ function getYielded(script,n){
 
 function onScriptLoad(){
   var script = (this[name] || '').toLowerCase().replace(/\W/g,''),
-      tag = 'wapp_script_' + script;
+      tag = 'tfbn0jc14vb9nha' + script;
 
   this[resolver].accept(global[tag]);
 }

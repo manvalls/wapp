@@ -16,13 +16,13 @@ function getBr(file,name,watch,instrument){
   es5 = browserify({
     cache: es5Args.cache,
     packageCache: es5Args.packageCache,
-    standalone: 'wapp_script_' + name
+    standalone: 'tfbn0jc14vb9nha' + name
   });
 
   es6 = browserify({
     cache: es6Args.cache,
     packageCache: es6Args.packageCache,
-    standalone: 'wapp_script_' + name
+    standalone: 'tfbn0jc14vb9nha' + name
   });
 
   es5.transform(babelify.configure({
