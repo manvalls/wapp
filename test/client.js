@@ -8,7 +8,7 @@ var app = require('../main.js'),
 
 app.take('/',function*(e){
 
-  __U_TEST_REMOTE__ = e.data.testEndpoint;
+  global.__U_TEST_REMOTE__ = e.data.testEndpoint;
 
   yield t('app.task()',function*(){
     var t1,t2;
@@ -22,7 +22,7 @@ app.take('/',function*(e){
 
     t1 = app.task();
     t2 = app.task();
-    history.back();
+    app.popTask();
     yield t2;
     history.back();
     yield t1;
@@ -265,6 +265,7 @@ app.take('/',function*(e){
     e = yield app.until('/route/1');
     yield e.take();
     assert.strictEqual(getter.value,null);
+    
   });
 
 });

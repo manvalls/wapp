@@ -74,6 +74,10 @@ app[define]({
     return task;
   },
 
+  popTask: function(){
+    if(tasks.length) tasks[tasks.length - 1].accept();
+  },
+
   goTo: function(loc,query,fragment){
 
     if(typeof query != 'object'){
@@ -104,7 +108,7 @@ app[define]({
     scr.type = 'text\/javascript';
     (document.head || document.getElementsByTagName('head')[0]).appendChild(scr);
 
-    if(global.wapp_mode == 'ES5') scr.src = encodeURI(location.origin + prefix + '/.scripts/' + script + '.es5.js');
+    if(global.YAa22vgIChMzhxs == 'ES5') scr.src = encodeURI(location.origin + prefix + '/.scripts/' + script + '.es5.js');
     else scr.src = encodeURI(location.origin + prefix + '/.scripts/' + script + '.js');
 
     return yd;
@@ -232,7 +236,7 @@ Event.prototype[define]({
   },
 
   language: function(lang){
-    var langs;
+    var langs,i;
 
     if(!this[langMap]){
       langs = navigator.languages || [navigator.language || navigator.userLanguage];

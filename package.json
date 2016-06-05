@@ -5,7 +5,7 @@
   "main": "main.js",
   "bin": "./bin.js",
   "dependencies": {
-    "babel-polyfill": "^6.9.0",
+    "babel-polyfill": "^6.9.1",
     "babel-preset-es2015": "^6.9.0",
     "babelify": "^7.3.0",
     "browserify": "^13.0.1",
@@ -17,15 +17,15 @@
     "path-event": "^6.0.2",
     "pct": "^1.1.0",
     "u-help": "^1.0.0",
-    "u-proto": "^6.5.0",
-    "url-rewriter": "^3.1.0",
+    "u-proto": "^6.5.1",
+    "url-rewriter": "^3.1.1",
     "watchify": "^3.7.0",
     "y-callback": "^1.2.3",
     "y-emitter": "^12.4.2",
-    "y-lock": "^3.1.0",
+    "y-lock": "^3.1.2",
     "y-resolver": "^9.2.2",
-    "y-setter": "^6.5.1",
-    "y-walk": "^10.0.5"
+    "y-setter": "^6.5.3",
+    "y-walk": "^10.0.6"
   },
   "repository": {
     "type": "git",
@@ -40,6 +40,6 @@
     "test": "u-test"
   },
   "devDependencies": {
-    "u-test": "^3.7.3"
+    "u-test": "^3.7.4"
   }
 }
