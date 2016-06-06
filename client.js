@@ -120,6 +120,15 @@ app[define]({
     return encodeURI(location.origin + prefix + '/.assets' + url);
   },
 
+  href: function(url,query,fragment){
+    if(url.charAt(0) != '/') url = getPathname(document.baseURI).replace(/[^\/]*$/,'') + url;
+    url = app.format(url,query,fragment);
+
+    url = url.replace(/^[^#\?]*/,replaceDots);
+    url = encodeURI(location.origin + prefix + url);
+    return url;
+  },
+
   route: function(route){
     var setter;
 
@@ -369,11 +378,7 @@ function replaceDots(m){
 function handle(url,query,fragment,replace){
   var i,qh,old;
 
-  if(url.charAt(0) != '/') url = getPathname(document.baseURI).replace(/[^\/]*$/,'') + url;
-  url = app.format(url,query,fragment);
-
-  url = url.replace(/^[^#\?]*/,replaceDots);
-  url = encodeURI(location.origin + prefix + url);
+  url = app.href(url,query,fragment);
 
   appEmitter.sun('busy','ready');
   old = xhr;
