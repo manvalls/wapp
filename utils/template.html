@@ -81,7 +81,7 @@ try{
   if('foo'.repeat(2) != 'foofoo') throw new Error();
   test = 1;
   if(!eval("String.raw`\n${test}` == '\\n1'")) throw new Error();
-  if('\u{2F804}' != '你') throw new Error();
+  if(eval("'\\u{2F804}'") != '你') throw new Error();
 
   (function(){
     eval('let foo = "bar"');
