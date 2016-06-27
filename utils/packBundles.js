@@ -20,14 +20,12 @@ packES5 = wrap(function*(file,b){
   var src = (yield b) + '',
       cb,i,files;
 
-  fs.readFile(require.resolve('babel-polyfill/dist/polyfill.js'),cb = Cb());
-  src = (yield cb) + '\n' + src;
-
   fs.readdir(path.resolve(__dirname,'shims'),cb = Cb());
   files = yield cb;
 
   files.sort();
   files.reverse();
+  files.push(require.resolve('babel-polyfill/dist/polyfill.js'));
 
   for(i = 0;i < files.length;i++){
     fs.readFile(path.resolve(__dirname,'shims',files[i]),cb = Cb());
