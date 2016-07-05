@@ -115,11 +115,13 @@ function* onReq(he, d, cy, gzipLevel, prefix, w, headers, cors){
 
     try{
 
-      return yield he.sendFile(
-        m[1] == 'assets' ?
-        pth.resolve(conf.assets,m[2]) :
-        pth.resolve(conf.build,'scripts',m[2])
-      );
+      return yield  m[1] == 'assets' ?
+                    he.sendFile(pth.resolve(conf.assets,m[2])) :
+                    he.sendFile(pth.resolve(conf.build,'scripts',m[2]),{
+                      headers: {
+                        'Service-Worker-Allowed': prefix + '/'
+                      }
+                    });
 
     }catch(er){
       eCode = getCode(er);
