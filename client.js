@@ -92,6 +92,12 @@ app[define]({
     onPopState({state: lastState});
   },
 
+  script: function(script){
+    script = (script || '').toLowerCase().replace(/\W/g,'');
+    if(global.YAa22vgIChMzhxs == 'ES5') return encodeURI(location.origin + prefix + '/.scripts/' + script + '.es5.js');
+    return encodeURI(location.origin + prefix + '/.scripts/' + script + '.js');
+  },
+
   load: function(script){
     var tag,scr,yd;
 
@@ -108,9 +114,7 @@ app[define]({
     scr.type = 'text\/javascript';
     (document.head || document.getElementsByTagName('head')[0]).appendChild(scr);
 
-    if(global.YAa22vgIChMzhxs == 'ES5') scr.src = encodeURI(location.origin + prefix + '/.scripts/' + script + '.es5.js');
-    else scr.src = encodeURI(location.origin + prefix + '/.scripts/' + script + '.js');
-
+    scr.src = app.script(script);
     return yd;
   },
 
