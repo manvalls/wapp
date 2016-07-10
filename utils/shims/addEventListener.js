@@ -1,6 +1,8 @@
 // developer.mozilla.org/en-US/docs/Web/API/EventTarget/addEventListener
 
 (function() {
+  var Element = typeof Element == 'undefined' ? EventTarget : Element;
+
   if (!Event.prototype.preventDefault) {
     Event.prototype.preventDefault=function() {
       this.returnValue=false;
@@ -13,7 +15,7 @@
   }
   if (!Element.prototype.addEventListener) {
     var eventListeners=[];
-    
+
     var addEventListener=function(type,listener /*, useCapture (will be ignored) */) {
       var self=this;
       var wrapper=function(e) {
@@ -33,7 +35,7 @@
         };
         document.attachEvent("onreadystatechange",wrapper2);
         eventListeners.push({object:this,type:type,listener:listener,wrapper:wrapper2});
-        
+
         if (document.readyState=="complete") {
           var e=new Event();
           e.srcElement=window;
@@ -72,4 +74,3 @@
     }
   }
 })();
-

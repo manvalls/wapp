@@ -92,9 +92,11 @@ app[define]({
     onPopState({state: lastState});
   },
 
-  script: function(script){
+  script: function(script,unshimmed){
+    var base = location.origin + prefix + '/.scripts/' + script;
+
     script = (script || '').toLowerCase().replace(/\W/g,'');
-    if(global.YAa22vgIChMzhxs == 'ES5') return encodeURI(location.origin + prefix + '/.scripts/' + script + '.es5.js');
+    if(global.YAa22vgIChMzhxs == 'ES5') return encodeURI(base + (unshimmed ? '.us' : '') + '.es5.js');
     return encodeURI(location.origin + prefix + '/.scripts/' + script + '.js');
   },
 
@@ -114,7 +116,7 @@ app[define]({
     scr.type = 'text\/javascript';
     (document.head || document.getElementsByTagName('head')[0]).appendChild(scr);
 
-    scr.src = app.script(script);
+    scr.src = app.script(script,true);
     return yd;
   },
 

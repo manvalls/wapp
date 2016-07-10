@@ -7,7 +7,7 @@ var wrap = require('y-walk').wrap,
     lock = require('./lock.js'),
     getConf = require('./getConf.js'),
 
-    RE = /((\.es5\.js\.gz)|(\.es5\.js)|(\.js\.gz)|(\.js))$/,
+    RE = /(\.us)?(\.es5)?\.js(\.gz)?$/,
     SRE = /((\.html\.gz)|(\.html)|(\.json\.gz)|(\.json))$/,
 
     removeDeleted,rmScripts,rmStatic,rmEntity,checkStaticFolder;

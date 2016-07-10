@@ -62,7 +62,8 @@ packBundles = wrap(function*(name,folder,es5,es6,log){
   try{
 
     yield [
-      name == 'main' ? packES5(file + '.es5.js',es5b) : packES6(file + '.es5.js',es5b),
+      packES5(file + '.es5.js',es5b),
+      packES6(file + '.us.es5.js',es5b),
       packES6(file + '.js',es6b)
     ];
 
