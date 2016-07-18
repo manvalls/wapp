@@ -1,10 +1,7 @@
 var Cb = require('y-callback/node'),
     wrap = require('y-walk').wrap,
 
-    path = require('path'),
-
-    es5Args = {cache:{}, packageCache: {}},
-    es6Args = {cache:{}, packageCache: {}};
+    path = require('path');
 
 function getBr(file,name,watch,instrument){
   var browserify = require('browserify'),
@@ -14,14 +11,14 @@ function getBr(file,name,watch,instrument){
       watchify,es5,es6;
 
   es5 = browserify({
-    cache: es5Args.cache,
-    packageCache: es5Args.packageCache,
+    cache: {},
+    packageCache: {},
     standalone: 'tfbn0jc14vb9nha' + name
   });
 
   es6 = browserify({
-    cache: es6Args.cache,
-    packageCache: es6Args.packageCache,
+    cache: {},
+    packageCache: {},
     standalone: 'tfbn0jc14vb9nha' + name
   });
 
