@@ -110,7 +110,7 @@ app[define]({
     if(scr = document.getElementById(tag)) return getYielded(scr,script);
 
     scr = document.createElement('script');
-    scr.id = script;
+    scr.id = tag;
     yd = getYielded(scr,script);
 
     scr.type = 'text\/javascript';
