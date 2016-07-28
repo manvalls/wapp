@@ -74,11 +74,11 @@ packBundles = wrap(function*(name,folder,es5,es6,log){
     if(log){
       console.log('\u001b[31m✗\u001b[0m\n');
 
-      e = e.errors[0] || e.errors[1];
+      e = e.errors[0] || e.errors[1] || e.errors[2];
       if(e.codeFrame && e.filename){
         console.log(e.filename);
         console.log('\n' + e.codeFrame + '\n');
-      }else console.log(e.message + '\n');
+      }else process.stdout.write(e.toString().replace(/^\n+|\n+$/g,'') + '\n\n');
 
     }
 
