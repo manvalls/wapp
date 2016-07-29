@@ -1,6 +1,7 @@
 {
   "instrument": true,
   "scripts": {
-    "foo": "./foo.js"
+    "foo": "./foo.js",
+    "baz": "./foo.js"
   }
 }

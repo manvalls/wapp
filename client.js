@@ -101,23 +101,48 @@ app[define]({
   },
 
   load: function(script){
-    var tag,scr,yd;
+    var tag,res,scr,inDoc;
 
     script = (script || '').toLowerCase().replace(/\W/g,'');
     tag = 'tfbn0jc14vb9nha' + script;
+    res = 'yz37oGsoX9nGtIt' + script;
 
-    if(global.hasOwnProperty(tag)) return Resolver.accept(global[tag]);
-    if(scr = document.getElementById(tag)) return getYielded(scr,script);
+    if(global.hasOwnProperty(res)) return global[res].yielded;
+    global[res] = new Resolver();
 
-    scr = document.createElement('script');
-    scr.id = tag;
-    yd = getYielded(scr,script);
+    if(global.hasOwnProperty(tag)){
+      global[res].accept(global[tag]);
+      delete global[tag];
+      return global[res].yielded;
+    }
 
-    scr.type = 'text\/javascript';
-    (document.head || document.getElementsByTagName('head')[0]).appendChild(scr);
+    if((inDoc = document.getElementById(tag)) || document.readyState != 'loading'){
+      scr = inDoc || document.createElement('script');
 
-    scr.src = app.script(script,true);
-    return yd;
+      scr[resolver] = global[res];
+      scr[name] = script;
+      scr.onload = onScriptLoad;
+      scr.onerror = onScriptError;
+
+      if(!inDoc){
+        scr.id = tag;
+        (document.head || document.getElementsByTagName('head')[0]).appendChild(scr);
+        scr.src = app.script(script,true);
+      }
+
+      return global[res].yielded;
+    }
+
+    document.write(`
+      <script id="${tag}" src="${app.script(script,true)}"></script>
+      <script>
+        if(window.hasOwnProperty('${tag}')) window['${res}'].accept(window['${tag}']);
+        else window['${res}'].reject(new Error('Could not load ${script}'));
+        delete window['${tag}'];
+      </script>
+    `);
+
+    return global[res].yielded;
   },
 
   asset: function(url){
@@ -275,23 +300,9 @@ function* filter(it){
   for(entry of it) if(entry[1] > 0) yield entry;
 }
 
-function getYielded(script,n){
-  if(script[resolver]) return script[resolver].yielded;
-
-  script[name] = n;
-  script[resolver] = new Resolver();
-
-  script.onload = onScriptLoad;
-  script.onerror = onScriptError;
-
-  return script[resolver].yielded;
-}
-
 function onScriptLoad(){
-  var script = (this[name] || '').toLowerCase().replace(/\W/g,''),
-      tag = 'tfbn0jc14vb9nha' + script;
-
-  this[resolver].accept(global[tag]);
+  this[resolver].accept(global[this.id]);
+  delete global[this.id];
 }
 
 function onScriptError(e){

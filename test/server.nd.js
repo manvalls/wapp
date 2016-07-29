@@ -23,6 +23,7 @@ server.once('listening',function(){
   "instrument": true,
   "scripts": {
     "foo": "./foo.js",
+    "baz": "./foo.js",
     "fake": "./fake.js"
   }
 }
@@ -31,7 +32,8 @@ server.once('listening',function(){
       setTimeout(()=>fs.writeFileSync(__dirname + '/app.json',`{
   "instrument": true,
   "scripts": {
-    "foo": "./foo.js"
+    "foo": "./foo.js",
+    "baz": "./foo.js"
   }
 }
 `),500);

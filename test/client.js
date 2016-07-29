@@ -4,11 +4,37 @@ var app = require('../main.js'),
     walk = require('y-walk'),
     wait = require('y-timers/wait');
 
+module.exports = 'foobar';
+
 // Tests
 
 app.take('/',function*(e){
 
   global.__U_TEST_REMOTE__ = e.data.testEndpoint;
+
+  yield t('app.load',function*(){
+    var error;
+
+    assert.deepEqual(yield [
+      app.load('foo'),
+      app.load('foo')
+    ],['bar','bar']);
+    assert.strictEqual(yield app.load('foo'),'bar');
+
+    error = null;
+    try{ yield app.load('bar'); }
+    catch(e){ error = e; }
+    assert(!!error);
+
+    assert.strictEqual('foobar',yield app.load('main'));
+    yield wait(0);
+    assert.strictEqual(yield app.load('baz'),'bar');
+
+    error = null;
+    try{ yield app.load('foobar'); }
+    catch(e){ error = e; }
+    assert(!!error);
+  });
 
   yield t('app.task()',function*(){
     var t1,t2;
@@ -142,20 +168,6 @@ app.take('/',function*(e){
     yield pe.changed();
   });
 
-  yield t('app.load',function*(){
-    var error;
-
-    assert.deepEqual(yield [
-      app.load('foo'),
-      app.load('foo')
-    ],['bar','bar']);
-    assert.strictEqual(yield app.load('foo'),'bar');
-
-    try{ yield app.load('bar'); }
-    catch(e){ error = e; }
-    assert(!!error);
-  });
-
   yield t('Language',function*(){
     var lang,e;
 
@@ -265,7 +277,7 @@ app.take('/',function*(e){
     e = yield app.until('/route/1');
     yield e.take();
     assert.strictEqual(getter.value,null);
-    
+
   });
 
 });
