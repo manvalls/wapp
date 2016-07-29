@@ -82,11 +82,13 @@ try{
   test = 1;
   if(!eval("String.raw`\n${test}` == '\\n1'")) throw new Error();
   if(eval("'\\u{2F804}'") != '你') throw new Error();
+  eval('let foo = "bar"');
+  eval('const myConst = 5');
+  eval('class Foo{}');
 
   (function(){
-    eval('let foo = "bar"');
-    eval('const myConst = 5');
-    eval('class Foo{}');
+    'use strict';
+    eval('function out(){} (function*(){return out();})().next().done');
     eval('if(true){ function blockFn(){} } if(typeof blockFn != "undefined") throw new Error();');
   })();
 
