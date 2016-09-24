@@ -15,12 +15,6 @@ function getBr(file,name,watch,instrument){
     standalone: 'tfbn0jc14vb9nha' + name
   });
 
-  es6 = browserify({
-    cache: {},
-    packageCache: {},
-    standalone: 'tfbn0jc14vb9nha' + name
-  });
-
   es5.transform(babelify.configure({
     plugins: [
       require('babel-plugin-check-es2015-constants'),
@@ -47,6 +41,14 @@ function getBr(file,name,watch,instrument){
     ],
     compact: false
   }),{global: true});
+
+  es6 = browserify({
+    cache: {},
+    packageCache: {},
+    standalone: 'tfbn0jc14vb9nha' + name
+  });
+
+  es6.transform(babelify.configure({compact: false}),{global: true});
 
   if(instrument){
     es5.transform(require('browserify-istanbul'));
