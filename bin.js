@@ -1,4 +1,4 @@
-#!/usr/bin/node --harmony
+#! /usr/bin/env node
 var path = require('path'),
     help = require('u-help');
 
