@@ -1,6 +1,6 @@
 {
   "name": "wapp",
-  "version": "19.7.1",
+  "version": "19.7.2",
   "description": "SPA framework",
   "main": "main.js",
   "bin": "./bin.js",
