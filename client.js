@@ -37,22 +37,24 @@ var PathEvent = require('path-event'),
     wappState = 'F267zopcHHbUvVC',
     lastState = state || (global.history || {}).state,
     fromPH = false,
-    xhr,app,appEmitter;
+    xhr,app;
 
 // app
 
-app = new UrlRewriter(emitter);
-appEmitter = app[emitter];
-updateMax(app,maximum);
+class Wapp extends UrlRewriter{
 
-appEmitter.sun('ready','busy');
+  constructor(){
+    super(emitter);
+    this[emitter].sun('ready','busy');
 
-app[routes] = new Map();
-app[define]({
+    this[routes] = new Map();
+    this[maximum] = null;
+    updateMax(this,maximum);
+  }
 
-  prefix: prefix,
+  get prefix(){ return prefix; }
 
-  task: function(){
+  task(){
     var task = new Resolver.Hybrid();
 
     tasks.push(task);
@@ -72,13 +74,13 @@ app[define]({
     }
 
     return task;
-  },
+  }
 
-  popTask: function(){
+  popTask(){
     if(tasks.length) tasks[tasks.length - 1].accept();
-  },
+  }
 
-  goTo: function(loc,query,fragment){
+  goTo(loc,query,fragment){
 
     if(typeof query != 'object'){
       fragment = query;
@@ -86,21 +88,21 @@ app[define]({
     }
 
     handle(loc,query,fragment);
-  },
+  }
 
-  trigger: function(){
+  trigger(){
     onPopState({state: lastState});
-  },
+  }
 
-  script: function(script,unshimmed){
+  script(script,unshimmed){
     var base = location.origin + prefix + '/.scripts/' + script;
 
     script = (script || '').toLowerCase().replace(/\W/g,'');
     if(global.YAa22vgIChMzhxs == 'ES5') return encodeURI(base + (unshimmed ? '.us' : '') + '.es5.js');
     return encodeURI(location.origin + prefix + '/.scripts/' + script + '.js');
-  },
+  }
 
-  load: function(script){
+  load(script){
     var tag,res,scr,inDoc;
 
     script = (script || '').toLowerCase().replace(/\W/g,'');
@@ -143,24 +145,24 @@ app[define]({
     `);
 
     return global[res].yielded;
-  },
+  }
 
-  asset: function(url){
+  asset(url){
     if(url.charAt(0) != '/') url = getPathname(document.baseURI).replace(/[^\/]*$/,'') + url;
     url = app.format(url);
     return encodeURI(location.origin + prefix + '/.assets' + url);
-  },
+  }
 
-  href: function(url,query,fragment){
+  href(url,query,fragment){
     if(url.charAt(0) != '/') url = getPathname(document.baseURI).replace(/[^\/]*$/,'') + url;
     url = app.format(url,query,fragment);
 
     url = url.replace(/^[^#\?]*/,replaceDots);
     url = encodeURI(location.origin + prefix + url);
     return url;
-  },
+  }
 
-  route: function(route){
+  route(route){
     var setter;
 
     if(this[routes].has(route)) return this[routes].get(route).getter;
@@ -171,24 +173,26 @@ app[define]({
     });
 
     return setter.getter;
-  },
+  }
 
-  detachRoute: function(route){
+  detachRoute(route){
     if(!this[routes].has(route)) return;
     this[routes].get(route).detacher.detach();
     this[routes].delete(route);
-  },
+  }
 
   get title(){
     return document.title;
-  },
+  }
 
   set title(title){
     document.title = title;
     if(global.history) history.replaceState(history.state,document.title,location.href);
   }
 
-});
+}
+
+app = new Wapp();
 
 // - handlers
 
@@ -208,35 +212,33 @@ function* onRoute(e,d,setter){
 
 // Event
 
-function Event(max,p,d){
-  var i,url,m;
+class Event extends PathEvent{
 
-  url = app.compute(getPathname() + location.search + location.hash);
-  m = url.match(/([^\?#]*)(?:\?([^#]*))?(?:#(.*))?/);
-  this[data] = Object.freeze(d);
+  constructor(max,p,d){
+    var i,url,m;
 
-  this[fragment] = m[3] == null ? null : m[3];
-  this[rawQuery] = m[2] == null ? null : m[2];
-  this[path] = m[1];
-  this[origin] = pct.decode(location.origin);
-  this[cookieStr] = document.cookie;
-  this[changeYd] = stateChange.yielded;
+    super();
+    url = app.compute(getPathname() + location.search + location.hash);
+    m = url.match(/([^\?#]*)(?:\?([^#]*))?(?:#(.*))?/);
+    this[data] = Object.freeze(d);
 
-  PathEvent.call(this,p || m[1],appEmitter,max);
+    this[fragment] = m[3] == null ? null : m[3];
+    this[rawQuery] = m[2] == null ? null : m[2];
+    this[path] = m[1];
+    this[origin] = pct.decode(location.origin);
+    this[cookieStr] = document.cookie;
+    this[changeYd] = stateChange.yielded;
 
-}
+    this.emit(p || m[1],app[emitter],max);
+  }
 
-Event.prototype = Object.create(PathEvent.prototype);
-Event.prototype[define]({
+  get data(){ return this[data]; }
 
-  constructor: Event,
-  get data(){ return this[data]; },
-
-  get fragment(){ return this[fragment]; },
-  get rawQuery(){ return this[rawQuery]; },
-  get query(){ return query(this); },
-  get path(){ return this[path]; },
-  changed: function(){ return this[changeYd]; },
+  get fragment(){ return this[fragment]; }
+  get rawQuery(){ return this[rawQuery]; }
+  get query(){ return query(this); }
+  get path(){ return this[path]; }
+  changed(){ return this[changeYd]; }
   get url(){
     var he,p,q,f;
 
@@ -247,12 +249,12 @@ Event.prototype[define]({
     f = this[fragment] != null ? '#' + this[fragment] : '';
 
     return this[url] = p + q + f;
-  },
+  }
 
-  get origin(){ return this[origin]; },
-  get cookies(){ return cookies(this,this[cookieStr]); },
+  get origin(){ return this[origin]; }
+  get cookies(){ return cookies(this,this[cookieStr]); }
 
-  setCookie: function(obj,props){
+  setCookie(obj,props){
     var attrs = '',
         keys,i,j;
 
@@ -273,9 +275,9 @@ Event.prototype[define]({
       document.cookie = pct.encodeComponent(i) + '=' + pct.encodeComponent(obj[i]) + attrs;
     }
 
-  },
+  }
 
-  language: function(lang){
+  language(lang){
     var langs,i;
 
     if(!this[langMap]){
@@ -291,7 +293,7 @@ Event.prototype[define]({
     return this[langMap].get('*');
   }
 
-});
+}
 
 // - utils
 
@@ -318,7 +320,7 @@ function onPopState(e){
     xhr = null;
   }
 
-  appEmitter.sun('ready','busy');
+  app[emitter].sun('ready','busy');
 
   if(global.history) state = history.state;
   else state = e.state;
@@ -397,7 +399,7 @@ function handle(url,query,fragment,replace){
 
   url = app.href(url,query,fragment);
 
-  appEmitter.sun('busy','ready');
+  app[emitter].sun('busy','ready');
   old = xhr;
   xhr = new XMLHttpRequest();
   if(old) old.abort();

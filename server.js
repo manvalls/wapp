@@ -3,7 +3,7 @@ var Hsm = require('hsm'),
     Detacher = require('detacher'),
     PathEvent = require('path-event'),
     updateMax = require('path-event/updateMax'),
-    wrap = require('y-walk').wrap,
+    walk = require('y-walk'),
     UrlRewriter = require('url-rewriter'),
 
     pth = require('path'),
@@ -26,77 +26,74 @@ var Hsm = require('hsm'),
 
 // Wapp
 
-function Wapp(server,dir,opt){
-  var headers = {
-        html: { "Content-Type": "text/html;charset=utf-8" },
-        json: { "Content-Type": "application/json" }
-      },
-      hsm,cy;
+class Wapp extends UrlRewriter{
 
-  dir = dir || process.cwd();
+  constructor(server,dir,opt){
+    var headers = {
+          html: { "Content-Type": "text/html;charset=utf-8" },
+          json: { "Content-Type": "application/json" }
+        },
+        hsm,cy;
 
-  UrlRewriter.call(this,emitter);
-  this[maximum] = null;
-  updateMax(this,maximum);
+    dir = dir || process.cwd();
 
-  opt = opt || {};
-  opt.gzipLevel = opt.gzipLevel || 4;
-  this[prefix] = opt.prefix = this.format(opt.prefix || '');
+    super(emitter);
+    this[maximum] = null;
+    updateMax(this,maximum);
 
-  if(opt.hasOwnProperty('framing')){
+    opt = opt || {};
+    opt.gzipLevel = opt.gzipLevel || 4;
+    this[prefix] = opt.prefix = this.format(opt.prefix || '');
 
-    if(opt.framing === false){
-      headers.html['X-Frame-Options'] = 'DENY';
-      headers.html['Content-Security-Policy'] = "frame-ancestors 'none'";
-    }else if(opt.framing !== true){
-      headers.html['X-Frame-Options'] = 'ALLOW-FROM ' + opt.framing;
-      headers.html['Content-Security-Policy'] = 'frame-ancestors ' + opt.framing;
+    if(opt.hasOwnProperty('framing')){
+
+      if(opt.framing === false){
+        headers.html['X-Frame-Options'] = 'DENY';
+        headers.html['Content-Security-Policy'] = "frame-ancestors 'none'";
+      }else if(opt.framing !== true){
+        headers.html['X-Frame-Options'] = 'ALLOW-FROM ' + opt.framing;
+        headers.html['Content-Security-Policy'] = 'frame-ancestors ' + opt.framing;
+      }
+
+    }else{
+
+      headers.html['X-Frame-Options'] = 'SAMEORIGIN';
+      headers.html['Content-Security-Policy'] = "frame-ancestors 'self'";
+
     }
 
-  }else{
+    headers.html['Vary'] = headers.json['Vary'] = 'Accept';
 
-    headers.html['X-Frame-Options'] = 'SAMEORIGIN';
-    headers.html['Content-Security-Policy'] = "frame-ancestors 'self'";
+    cy = getConf(dir);
+    this[detacher] = new Detacher();
+
+    hsm = new Hsm(server,opt.host);
+
+    this[detacher].add( hsm.on(
+      'GET ' + opt.prefix + '/*',
+      onReq,
+      cy,
+      opt.gzipLevel,
+      opt.prefix,
+      this,
+      headers,
+      opt.cors
+    ) );
 
   }
 
-  headers.html['Vary'] = headers.json['Vary'] = 'Accept';
-
-  cy = getConf(dir);
-  this[detacher] = new Detacher();
-
-  hsm = new Hsm(server,opt.host);
-
-  this[detacher].add( hsm.on(
-    'GET ' + opt.prefix + '/*',
-    onReq,
-    cy,
-    opt.gzipLevel,
-    opt.prefix,
-    this,
-    headers,
-    opt.cors
-  ) );
-
-}
-
-Wapp.prototype = Object.create(UrlRewriter.prototype);
-Wapp.prototype[define]({
-
-  constructor: Wapp,
-
-  detach: function(){
+  detach(){
     this[detacher].detach();
-  },
+  }
 
-  get prefix(){ return this[prefix]; },
+  get prefix(){ return this[prefix]; }
 
-  asset: function(url){
+  asset(url){
     url = this.format(url);
     return encodeURI(this[prefix] + '/.assets' + url);
   }
 
-});
+}
 
 // - utils
 
@@ -147,64 +144,31 @@ function* onReq(he, d, cy, gzipLevel, prefix, w, headers, cors){
 
 // Event
 
-function Event(pth,he,conf,gzipLevel,e,max,pn,pref,headers,errorCode){
+class Event extends PathEvent{
 
-  this[path] = pn;
-  this[hsmEvent] = he;
-  this[prefix] = pref;
+  constructor(pth,he,conf,gzipLevel,e,max,pn,pref,headers,errorCode){
 
-  this[configuration] = conf;
-  this[gzLv] = gzipLevel;
-  this[emitter] = e;
-  this[error] = errorCode;
+    super();
 
-  this[globalHeaders] = headers;
-  PathEvent.call(this,pth,e,max);
+    this[path] = pn;
+    this[hsmEvent] = he;
+    this[prefix] = pref;
 
-}
+    this[configuration] = conf;
+    this[gzLv] = gzipLevel;
+    this[emitter] = e;
+    this[error] = errorCode;
 
-Event.prototype = Object.create(PathEvent.prototype);
-Event.prototype[define]({
+    this[globalHeaders] = headers;
+    this.emit(pth,e,max);
 
-  constructor: Event,
+  }
 
-  use: wrap(function*(st){
-    var status = this[error] || 200,
-        conf = this[configuration],
-        he = this[hsmEvent];
+  use(){
+    walk(use,arguments,this);
+  }
 
-    if(he.accept('application/json') > he.accept('text/html')){
-
-      try{
-
-        yield he.sendFile(pth.resolve(conf.build,'static',st + '.json'),{
-          code: status,
-          mimeHeaders: this[globalHeaders]
-        });
-
-      }catch(e){ return this.throw(getCode(e)); }
-
-    }else{
-
-      he.setCookie({
-        ['AR9CVdhVmrgQhE8']: this[prefix],
-        ['xEu07Sej0MGuwKs']: status
-      });
-
-      try{
-
-        yield he.sendFile(pth.resolve(conf.build,'static',st + '.html'),{
-          code: status,
-          mimeHeaders: this[globalHeaders]
-        });
-
-      }catch(e){ return this.throw(getCode(e)); }
-
-    }
-
-  }),
-
-  answer: function(data){
+  answer(data){
     var status = this[error] || 200,
         gzipLevel = this[gzLv],
         he = this[hsmEvent],
@@ -233,9 +197,9 @@ Event.prototype[define]({
 
     }
 
-  },
+  }
 
-  throw: function(code){
+  throw(code){
     var path = 'e/' + code,
         ev = new Event(path,this[hsmEvent],this[configuration],this[gzLv],this[emitter],this[emitter].target[maximum],this[path],this[prefix],this[globalHeaders],code),
         firstDigit;
@@ -249,12 +213,12 @@ Event.prototype[define]({
     }
 
     ev.give();
-  },
+  }
 
-  get fragment(){ return this[hsmEvent].fragment; },
-  get rawQuery(){ return this[hsmEvent].rawQuery; },
-  get query(){ return this[hsmEvent].query; },
-  get path(){ return this[path]; },
+  get fragment(){ return this[hsmEvent].fragment; }
+  get rawQuery(){ return this[hsmEvent].rawQuery; }
+  get query(){ return this[hsmEvent].query; }
+  get path(){ return this[path]; }
   get url(){
     var he,p,q,f;
 
@@ -266,15 +230,15 @@ Event.prototype[define]({
     f = he.fragment != null ? '#' + he.fragment : '';
 
     return this[url] = p + q + f;
-  },
+  }
 
-  get origin(){ return this[hsmEvent].origin; },
-  get cookies(){ return this[hsmEvent].cookies; },
-  get lastTime(){ return this[hsmEvent].lastTime; },
+  get origin(){ return this[hsmEvent].origin; }
+  get cookies(){ return this[hsmEvent].cookies; }
+  get lastTime(){ return this[hsmEvent].lastTime; }
 
-  setCookie: function(){ return this[hsmEvent].setCookie.apply(this[hsmEvent],arguments); },
-  language: function(){ return this[hsmEvent].language.apply(this[hsmEvent],arguments); },
-  notModified: function(){
+  setCookie(){ return this[hsmEvent].setCookie.apply(this[hsmEvent],arguments); }
+  language(){ return this[hsmEvent].language.apply(this[hsmEvent],arguments); }
+  notModified(){
     var he = this[hsmEvent];
 
     if(he.accept('application/json') <= he.accept('text/html')) he.setCookie({
@@ -283,16 +247,52 @@ Event.prototype[define]({
     });
 
     return he.notModified();
-  },
+  }
 
-  redirect: function(location,query,fragment,permanent){
+  redirect(location,query,fragment,permanent){
     if(/^\w+/.test(location)) this[hsmEvent].redirect(location,query,fragment,permanent);
     else this[hsmEvent].redirect(this[prefix] + location,query,fragment,permanent);
   }
 
-});
+}
 
 // - utils
+
+function* use(st){
+  var status = this[error] || 200,
+      conf = this[configuration],
+      he = this[hsmEvent];
+
+  if(he.accept('application/json') > he.accept('text/html')){
+
+    try{
+
+      yield he.sendFile(pth.resolve(conf.build,'static',st + '.json'),{
+        code: status,
+        mimeHeaders: this[globalHeaders]
+      });
+
+    }catch(e){ return this.throw(getCode(e)); }
+
+  }else{
+
+    he.setCookie({
+      ['AR9CVdhVmrgQhE8']: this[prefix],
+      ['xEu07Sej0MGuwKs']: status
+    });
+
+    try{
+
+      yield he.sendFile(pth.resolve(conf.build,'static',st + '.html'),{
+        code: status,
+        mimeHeaders: this[globalHeaders]
+      });
+
+    }catch(e){ return this.throw(getCode(e)); }
+
+  }
+
+}
 
 function isLegacy(he){
   return /MSIE [0-8]\./.test(he.request.headers.accept);
