@@ -3,10 +3,14 @@ var Wapp = require('../main.js'),
     build = require('../build.js'),
     browser = require('u-test/browser'),
     http = require('http'),
+    Hsm = require('hsm'),
     fs = require('fs'),
     server = http.createServer().listen(0),
-    app = new Wapp(server,__dirname),
-    endpoint,watcher;
+    hsm = new Hsm(server),
+    app = new Wapp(__dirname),
+    endpoint, watcher;
+
+app.bind(hsm);
 
 server.once('listening',function(){
   try{
@@ -55,7 +59,6 @@ app.take('/',function*(e){
 app.take('/detach',function(e){
   e.answer('ok');
   watcher.detach();
-  app.detach();
   server.close();
 });
 

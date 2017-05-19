@@ -2,7 +2,6 @@ var Hsm = require('hsm'),
     define = require('u-proto/define'),
     Detacher = require('detacher'),
     PathEvent = require('path-event'),
-    updateMax = require('path-event/updateMax'),
     walk = require('y-walk'),
     UrlRewriter = require('url-rewriter'),
 
@@ -13,7 +12,6 @@ var Hsm = require('hsm'),
 
     error = Symbol(),
     detacher = Symbol(),
-    maximum = Symbol(),
     emitter = Symbol(),
 
     path = Symbol(),
@@ -22,24 +20,24 @@ var Hsm = require('hsm'),
     prefix = Symbol(),
     configuration = Symbol(),
     gzLv = Symbol(),
+    confYielded = Symbol(),
     globalHeaders = Symbol();
 
 // Wapp
 
 class Wapp extends UrlRewriter{
 
-  constructor(server,dir,opt){
+  constructor(dir){
+    super(emitter);
+    dir = dir || process.cwd();
+    this[confYielded] = getConf(dir);
+  }
+
+  bind(hsm, opt){
     var headers = {
           html: { "Content-Type": "text/html;charset=utf-8" },
           json: { "Content-Type": "application/json" }
-        },
-        hsm,cy;
-
-    dir = dir || process.cwd();
-
-    super(emitter);
-    this[maximum] = null;
-    updateMax(this,maximum);
+        };
 
     opt = opt || {};
     opt.gzipLevel = opt.gzipLevel || 4;
@@ -64,26 +62,16 @@ class Wapp extends UrlRewriter{
 
     headers.html['Vary'] = headers.json['Vary'] = 'Accept';
 
-    cy = getConf(dir);
-    this[detacher] = new Detacher();
-
-    hsm = new Hsm(server,opt.host);
-
-    this[detacher].add( hsm.on(
+    return hsm.on(
       'GET ' + opt.prefix + '/*',
       onReq,
-      cy,
+      this[confYielded],
       opt.gzipLevel,
       opt.prefix,
       this,
       headers,
       opt.cors
-    ) );
-
-  }
-
-  detach(){
-    this[detacher].detach();
+    );
   }
 
   get prefix(){ return this[prefix]; }
@@ -136,7 +124,7 @@ function* onReq(he, d, cy, gzipLevel, prefix, w, headers, cors){
     he.response.end();
 
   }else{
-    ev = new Event(path,he,conf,gzipLevel,w[emitter],w[maximum],pathname,prefix,headers,eCode);
+    ev = new Event(path,he,conf,gzipLevel,w[emitter],pathname,prefix,headers,eCode);
     ev.give();
   }
 
@@ -146,7 +134,7 @@ function* onReq(he, d, cy, gzipLevel, prefix, w, headers, cors){
 
 class Event extends PathEvent{
 
-  constructor(pth,he,conf,gzipLevel,e,max,pn,pref,headers,errorCode){
+  constructor(pth,he,conf,gzipLevel,e,pn,pref,headers,errorCode){
 
     super();
 
@@ -160,7 +148,7 @@ class Event extends PathEvent{
     this[error] = errorCode;
 
     this[globalHeaders] = headers;
-    this.emit(pth,e,max);
+    this.emit(pth,e);
 
   }
 
@@ -201,7 +189,7 @@ class Event extends PathEvent{
 
   throw(code){
     var path = 'e/' + code,
-        ev = new Event(path,this[hsmEvent],this[configuration],this[gzLv],this[emitter],this[emitter].target[maximum],this[path],this[prefix],this[globalHeaders],code),
+        ev = new Event(path,this[hsmEvent],this[configuration],this[gzLv],this[emitter],this[path],this[prefix],this[globalHeaders],code),
         firstDigit;
 
     if(typeof code != 'number') code = 500;

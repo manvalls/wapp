@@ -42,7 +42,7 @@ getConf = wrap(function*(dir){
         assets: './assets',
         build: './build',
         scripts: {
-          main: './client.js'
+          main: './client'
         },
         instrument: false
       },

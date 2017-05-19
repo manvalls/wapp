@@ -1,5 +1,4 @@
 var PathEvent = require('path-event'),
-    updateMax = require('path-event/updateMax'),
     Target = require('y-emitter').Target,
     define = require('u-proto/define'),
     Resolver = require('y-resolver'),
@@ -19,7 +18,6 @@ var PathEvent = require('path-event'),
     data = Symbol(),
     routes = Symbol(),
 
-    maximum = Symbol(),
     resolver = Symbol(),
     emitter = Symbol(),
     name = Symbol(),
@@ -48,8 +46,6 @@ class Wapp extends UrlRewriter{
     this[emitter].sun('ready','busy');
 
     this[routes] = new Map();
-    this[maximum] = null;
-    updateMax(this,maximum);
   }
 
   get prefix(){ return prefix; }
@@ -214,7 +210,7 @@ function* onRoute(e,d,setter){
 
 class Event extends PathEvent{
 
-  constructor(max,p,d){
+  constructor(p,d){
     var i,url,m;
 
     super();
@@ -229,7 +225,7 @@ class Event extends PathEvent{
     this[cookieStr] = document.cookie;
     this[changeYd] = stateChange.yielded;
 
-    this.emit(p || m[1],app[emitter],max);
+    this.emit(p || m[1],app[emitter]);
   }
 
   get data(){ return this[data]; }
@@ -376,7 +372,7 @@ function onPopState(e){
   firstDigit = Math.floor(state.statusCode / 100);
 
   if(firstDigit == 2){
-    ev = new Event(app[maximum],null,state.data);
+    ev = new Event(null,state.data);
     ev.give();
     sc.accept();
     return;
@@ -385,7 +381,7 @@ function onPopState(e){
   if(firstDigit != 4 && firstDigit != 5 && state.statusCode != 0) code = 400;
   else code = state.statusCode;
 
-  ev = new Event(app[maximum],'e/' + code,state.data);
+  ev = new Event('e/' + code,state.data);
   ev.give();
   sc.accept();
 }
