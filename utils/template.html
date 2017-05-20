@@ -60,6 +60,7 @@ try{
   test = new Map(); test = new Set(); test = new WeakMap(); test = new WeakSet();
   test = new Promise(function(){});
   eval('for(test of []){}');
+  test = eval('async function foo(){ await 1; }');
   test = eval('a => a + 1');
   test = eval('function* test(){}');
   eval('test = {[1 + 2]: 3, foo(){ return \'bar\';}, test}');

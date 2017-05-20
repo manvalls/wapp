@@ -38,7 +38,7 @@ function getPw(conf,dir,log){
   pw.sw = getSw(conf.static,dir,log);
 
   for(i in conf.scripts) if(conf.scripts.hasOwnProperty(i)){
-    wMap[i] = getW(conf.scripts[i],i,path.resolve(conf.build,'scripts'),log,conf.instrument);
+    wMap[i] = getW(conf.scripts[i],i,path.resolve(conf.build,'scripts'),log,conf.instrument,conf.plugins,dir);
   }
 
   pw.wMap = wMap;
@@ -46,8 +46,8 @@ function getPw(conf,dir,log){
   return pw;
 }
 
-function getW(file,name,folder,log,instrument){
-  var brs = getBr(file,name,true,instrument);
+function getW(file,name,folder,log,instrument,plugins,dir){
+  var brs = getBr(file,name,true,instrument,plugins,dir);
 
   brs[0].name = name;
   brs[0].folder = folder;

@@ -17,7 +17,7 @@ build = wrap(function*(dir,log){
   yield cache(dir,log);
 
   for(i in conf.scripts) if(conf.scripts.hasOwnProperty(i)){
-    brs = getBr(conf.scripts[i],i,false,conf.instrument);
+    brs = getBr(conf.scripts[i],i,false,conf.instrument,conf.plugins,dir);
     yield packBundles(i,path.resolve(conf.build,'scripts'),brs[0],brs[1],log);
   }
 

@@ -60,7 +60,7 @@ class Wapp extends UrlRewriter{
 
     }
 
-    headers.html['Vary'] = headers.json['Vary'] = 'Accept';
+    headers.html['Vary'] = headers.json['Vary'] = 'Accept, Cookie';
 
     return hsm.on(
       'GET ' + opt.prefix + '/*',
@@ -93,20 +93,32 @@ function* onReq(he, d, cy, gzipLevel, prefix, w, headers, cors){
   conf = yield cy;
 
   path = w.compute(pathname);
-  m = path.match(/^\/.(assets|scripts)\/(.*)/);
+  m = path.match(/^\/.(assets|scripts|build)\/(.*)/);
 
   if(m){
     if(cors && cors.origin) yield he.checkOrigin(cors.origin,cors);
 
     try{
 
-      return yield  m[1] == 'assets' ?
-                    he.sendFile(pth.resolve(conf.assets,m[2])) :
-                    he.sendFile(pth.resolve(conf.build,'scripts',m[2]),{
-                      headers: {
-                        'Service-Worker-Allowed': prefix + '/'
-                      }
-                    });
+      switch(m[1]){
+
+        case 'assets': {
+          return yield he.sendFile(pth.resolve(conf.assets,m[2]));
+        }
+
+        case 'scripts': {
+          return yield he.sendFile(pth.resolve(conf.build,'scripts',m[2]),{
+            headers: {
+              'Service-Worker-Allowed': prefix + '/'
+            }
+          });
+        }
+
+        case 'build': {
+          return yield he.sendFile(pth.resolve(conf.build,'other',m[2]));
+        }
+
+      }
 
     }catch(er){
       eCode = getCode(er);

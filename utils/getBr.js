@@ -3,9 +3,10 @@ var Cb = require('y-callback/node'),
 
     path = require('path');
 
-function getBr(file,name,watch,instrument){
+function getBr(file,name,watch,instrument,plugins,dir){
   var browserify = require('browserify'),
       babelify = require('babelify'),
+      resolve = require('resolve'),
 
       watchify,es5,es6;
 
@@ -14,6 +15,39 @@ function getBr(file,name,watch,instrument){
     packageCache: {},
     standalone: 'tfbn0jc14vb9nha' + name
   });
+
+  es6 = browserify({
+    cache: {},
+    packageCache: {},
+    standalone: 'tfbn0jc14vb9nha' + name
+  });
+
+  for(let [plugin, options = {}, resolveOptions = {}] of plugins){
+
+    for(let [key, value] of Object.entries(resolveOptions)){
+
+      if(value instanceof Array){
+        let nv = [];
+
+        for(let elem of value){
+          try{ nv.push( resolve.sync(elem, {basedir: dir}) ); }
+          catch(e){ nv.push( path.resolve(dir, elem) ); }
+        }
+
+        options[key] = nv;
+
+      }else{
+        try{ options[key] = resolve.sync(value, {basedir: dir}); }
+        catch(e){ options[key] = path.resolve(dir, value); }
+      }
+
+    }
+
+    plugin = require( resolve.sync(plugin, {basedir: dir}) );
+    es5.plugin(plugin, options);
+    es6.plugin(plugin, options);
+
+  }
 
   es5.transform(babelify.configure({
     plugins: [
@@ -36,17 +70,12 @@ function getBr(file,name,watch,instrument){
       require('babel-plugin-transform-es2015-template-literals'),
       require('babel-plugin-transform-es2015-typeof-symbol'),
       require('babel-plugin-transform-es2015-unicode-regex'),
+      require('babel-plugin-transform-async-to-generator'),
       require('babel-plugin-transform-exponentiation-operator'),
       require('babel-plugin-transform-regenerator')
     ],
     compact: false
   }),{global: true});
-
-  es6 = browserify({
-    cache: {},
-    packageCache: {},
-    standalone: 'tfbn0jc14vb9nha' + name
-  });
 
   es6.transform(babelify.configure({compact: false}),{global: true});
 
