@@ -6,8 +6,8 @@ var PathEvent = require('path-event'),
     UrlRewriter = require('url-rewriter'),
     Setter = require('y-setter'),
 
-    query = require('hsm/Event/query'),
-    cookies = require('hsm/Event/cookies'),
+    query = require('hsm/main/Event/query'),
+    cookies = require('hsm/main/Event/cookies'),
 
     fragment = Symbol(),
     rawQuery = Symbol(),
@@ -91,11 +91,13 @@ class Wapp extends UrlRewriter{
   }
 
   script(script,unshimmed){
-    var base = location.origin + prefix + '/.scripts/' + script;
+    var base;
 
     script = (script || '').toLowerCase().replace(/\W/g,'');
+    base = location.origin + prefix + '/.scripts/' + script;
+
     if(global.YAa22vgIChMzhxs == 'ES5') return encodeURI(base + (unshimmed ? '.us' : '') + '.es5.js');
-    return encodeURI(location.origin + prefix + '/.scripts/' + script + '.js');
+    return encodeURI(base + '.js');
   }
 
   load(script){
@@ -149,13 +151,62 @@ class Wapp extends UrlRewriter{
     return encodeURI(location.origin + prefix + '/.assets' + url);
   }
 
-  href(url,query,fragment){
+  build(url){
     if(url.charAt(0) != '/') url = getPathname(document.baseURI).replace(/[^\/]*$/,'') + url;
+    url = app.format(url);
+    return encodeURI(location.origin + prefix + '/.build' + url);
+  }
+
+  href(url,query,fragment){
+
+    if(url.charAt(0) != '/'){
+      let base = getPathname(document.baseURI).replace(/[^\/]*$/,'');
+      url = url.split(location.origin + prefix + base).join('');
+      url = base + url;
+    }
+
     url = app.format(url,query,fragment);
 
     url = url.replace(/^[^#\?]*/,replaceDots);
     url = encodeURI(location.origin + prefix + url);
     return url;
+  }
+
+  get assetModifier(){
+    return (obj) => {
+      if(obj.src) obj.src = this.asset(obj.src);
+      if(obj.href) obj.href = this.asset(obj.href);
+    };
+  }
+
+  get scriptModifier(){
+    return (obj) => {
+      if(obj.src) obj.src = this.script(obj.src);
+      if(obj.href) obj.href = this.script(obj.href);
+    };
+  }
+
+  get buildModifier(){
+    return (obj) => {
+      if(obj.src) obj.src = this.build(obj.src);
+      if(obj.href) obj.href = this.build(obj.href);
+    };
+  }
+
+  get linkDirective(){
+    var self = this;
+
+    return function(){
+      var {on} = this.std;
+      
+      this.node.href = self.href(this.node.href);
+
+      this.render( on('click', (event) => {
+        event.preventDefault();
+        self.goTo(this.node.href);
+      }) );
+
+    };
   }
 
   route(route){

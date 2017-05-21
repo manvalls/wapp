@@ -27,10 +27,13 @@ var Hsm = require('hsm'),
 
 class Wapp extends UrlRewriter{
 
-  constructor(dir){
+  constructor(dir, opt){
     super(emitter);
     dir = dir || process.cwd();
     this[confYielded] = getConf(dir);
+
+    opt = opt || {};
+    this[prefix] = opt.prefix = this.format(opt.prefix || '');
   }
 
   bind(hsm, opt){
@@ -40,8 +43,8 @@ class Wapp extends UrlRewriter{
         };
 
     opt = opt || {};
+    opt.prefix = this.format(opt.prefix || '');
     opt.gzipLevel = opt.gzipLevel || 4;
-    this[prefix] = opt.prefix = this.format(opt.prefix || '');
 
     if(opt.hasOwnProperty('framing')){
 
