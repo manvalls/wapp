@@ -103,7 +103,7 @@ onPkg = wrap(function*(){
       }
 
       if(conf.scripts[i])
-        this.wMap[i] = getW(conf.scripts[i],i,path.resolve(conf.build,'scripts'),this.log);
+        this.wMap[i] = getW(conf.scripts[i],i,path.resolve(conf.build,'scripts'),this.log,conf.instrument,conf.plugins,this.dir);
 
     }
 
