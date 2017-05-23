@@ -280,6 +280,14 @@ app.take('/',function*(e){
 
   });
 
+  yield t('app.post()',function*(){
+    var e;
+
+    app.post('test', '/echo');
+    e = yield app.until('/echo');
+    assert.strictEqual(e.data, 'test');
+  });
+
 });
 
 app.trigger();

@@ -119,6 +119,10 @@ app.take('/asset',function(e){
   e.answer(app.asset(e.query.asset));
 });
 
+app.take('/echo',function(e){
+  e.answer(e.data);
+});
+
 app.take('/e500',function(e){
   var obj = {};
   obj.self = obj;

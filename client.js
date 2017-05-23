@@ -86,6 +86,16 @@ class Wapp extends UrlRewriter{
     handle(loc,query,fragment);
   }
 
+  post(payload,loc,query,fragment){
+
+    if(typeof query != 'object'){
+      fragment = query;
+      query = null;
+    }
+
+    handle(loc,query,fragment,null,payload);
+  }
+
   trigger(){
     onPopState({state: lastState});
   }
@@ -166,8 +176,6 @@ class Wapp extends UrlRewriter{
     }
 
     url = app.format(url,query,fragment);
-
-    url = url.replace(/^[^#\?]*/,replaceDots);
     url = encodeURI(location.origin + prefix + url);
     return url;
   }
@@ -198,7 +206,7 @@ class Wapp extends UrlRewriter{
 
     return function(){
       var {on} = this.std;
-      
+
       this.node.href = self.href(this.node.href);
 
       this.render( on('click', (event) => {
@@ -437,13 +445,10 @@ function onPopState(e){
   sc.accept();
 }
 
-function replaceDots(m){
-  return m.replace(/\/\./g,'/');
-}
-
-function handle(url,query,fragment,replace){
+function handle(url,query,fragment,replace,payload){
   var i,qh,old;
 
+  if(payload !== undefined) payload = JSON.stringify(payload);
   url = app.href(url,query,fragment);
 
   app[emitter].sun('busy','ready');
@@ -465,10 +470,17 @@ function handle(url,query,fragment,replace){
   xhr.wapp_replaceState = replace;
 
   xhr.onreadystatechange = listener;
-  xhr.open('GET',url,true);
+
+  if(payload === undefined) xhr.open('GET',url,true);
+  else{
+    xhr.open('POST',url,true);
+    xhr.setRequestHeader('Content-type','application/json');
+  }
+
   xhr.setRequestHeader('Accept','application/json');
   if(qh) xhr.setRequestHeader('Query',qh);
-  xhr.send();
+  if(payload === undefined) xhr.send();
+  else xhr.send(payload);
 }
 
 function listener(){

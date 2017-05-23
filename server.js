@@ -13,6 +13,7 @@ var Hsm = require('hsm'),
     error = Symbol(),
     detacher = Symbol(),
     emitter = Symbol(),
+    data = Symbol(),
 
     path = Symbol(),
     url = Symbol(),
@@ -40,7 +41,8 @@ class Wapp extends UrlRewriter{
     var headers = {
           html: { "Content-Type": "text/html;charset=utf-8" },
           json: { "Content-Type": "application/json" }
-        };
+        },
+        d;
 
     opt = opt || {};
     opt.prefix = this.format(opt.prefix || '');
@@ -65,7 +67,7 @@ class Wapp extends UrlRewriter{
 
     headers.html['Vary'] = headers.json['Vary'] = 'Accept, Cookie';
 
-    return hsm.on(
+    d = hsm.on(
       'GET ' + opt.prefix + '/*',
       onReq,
       this[confYielded],
@@ -75,6 +77,20 @@ class Wapp extends UrlRewriter{
       headers,
       opt.cors
     );
+
+    d.add( hsm.on(
+      'POST ' + opt.prefix + '/*',
+      onReq,
+      this[confYielded],
+      opt.gzipLevel,
+      opt.prefix,
+      this,
+      headers,
+      opt.cors,
+      true
+    ) );
+
+    return d;
   }
 
   get prefix(){ return this[prefix]; }
@@ -88,15 +104,15 @@ class Wapp extends UrlRewriter{
 
 // - utils
 
-function* onReq(he, d, cy, gzipLevel, prefix, w, headers, cors){
+function* onReq(he, d, cy, gzipLevel, prefix, w, headers, cors, isPost){
   var pathname = '/' + he.args,
-      path,ev,eCode,conf,m;
+      path,ev,eCode,conf,m,payload;
 
   yield he.take();
   conf = yield cy;
 
   path = w.compute(pathname);
-  m = path.match(/^\/.(assets|scripts|build)\/(.*)/);
+  if(!isPost) m = path.match(/^\/.(assets|scripts|build)\/(.*)/);
 
   if(m){
     if(cors && cors.origin) yield he.checkOrigin(cors.origin,cors);
@@ -130,7 +146,19 @@ function* onReq(he, d, cy, gzipLevel, prefix, w, headers, cors){
 
   }else if(cors && cors.origin) yield he.checkOrigin(cors.origin,cors);
 
-  if(he.accept('application/json') == he.accept('text/html') && !isLegacy(he)){
+  if(isPost){
+    try{
+      if(he.request.headers['content-type'] != 'application/json') throw new Error();
+      payload = yield he.request;
+      payload += '';
+      payload = JSON.parse(payload);
+    }catch(er){
+      eCode = getCode(er);
+      path = 'e/' + eCode;
+    }
+  }
+
+  if(!eCode && he.accept('application/json') == he.accept('text/html') && !isLegacy(he)){
 
     he.response.writeHead(403,'CSRF detected',{
       'Vary': 'Accept'
@@ -139,7 +167,7 @@ function* onReq(he, d, cy, gzipLevel, prefix, w, headers, cors){
     he.response.end();
 
   }else{
-    ev = new Event(path,he,conf,gzipLevel,w[emitter],pathname,prefix,headers,eCode);
+    ev = new Event(path,he,conf,gzipLevel,w[emitter],pathname,prefix,headers,eCode,payload);
     ev.give();
   }
 
@@ -149,10 +177,11 @@ function* onReq(he, d, cy, gzipLevel, prefix, w, headers, cors){
 
 class Event extends PathEvent{
 
-  constructor(pth,he,conf,gzipLevel,e,pn,pref,headers,errorCode){
+  constructor(pth,he,conf,gzipLevel,e,pn,pref,headers,errorCode,payload){
 
     super();
 
+    this[data] = payload;
     this[path] = pn;
     this[hsmEvent] = he;
     this[prefix] = pref;
@@ -165,6 +194,10 @@ class Event extends PathEvent{
     this[globalHeaders] = headers;
     this.emit(pth,e);
 
+  }
+
+  get data(){
+    return this[data];
   }
 
   use(){
@@ -307,7 +340,7 @@ function getCode(e){
     case 'ENOENT': return 404;
     case 'EISDIR':
     case 'EPERM': return 403;
-    default: return 500;
+    default: return 400;
   }
 
 }
