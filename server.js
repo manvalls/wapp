@@ -87,6 +87,7 @@ class Wapp extends UrlRewriter{
       this,
       headers,
       opt.cors,
+      opt.maxBodySize,
       true
     ) );
 
@@ -104,7 +105,7 @@ class Wapp extends UrlRewriter{
 
 // - utils
 
-function* onReq(he, d, cy, gzipLevel, prefix, w, headers, cors, isPost){
+function* onReq(he, d, cy, gzipLevel, prefix, w, headers, cors, maxBodySize, isPost){
   var pathname = '/' + he.args,
       path,ev,eCode,conf,m,payload;
 
@@ -149,6 +150,7 @@ function* onReq(he, d, cy, gzipLevel, prefix, w, headers, cors, isPost){
   if(isPost){
     try{
       if(he.request.headers['content-type'] != 'application/json') throw new Error();
+      if(maxBodySize) he.request.maxSize = maxBodySize;
       payload = yield he.request;
       payload += '';
       payload = JSON.parse(payload);
