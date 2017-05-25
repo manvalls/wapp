@@ -446,9 +446,13 @@ function onPopState(e){
 }
 
 function handle(url,query,fragment,replace,payload){
-  var i,qh,old;
+  var i,qh,old,isFormData;
 
-  if(payload !== undefined) payload = JSON.stringify(payload);
+  if(payload !== undefined){
+    if(global.FormData && (payload instanceof FormData)) isFormData = true;
+    else payload = JSON.stringify(payload);
+  }
+
   url = app.href(url,query,fragment);
 
   app[emitter].sun('busy','ready');
@@ -474,7 +478,7 @@ function handle(url,query,fragment,replace,payload){
   if(payload === undefined) xhr.open('GET',url,true);
   else{
     xhr.open('POST',url,true);
-    xhr.setRequestHeader('Content-type','application/json');
+    if(!isFormData) xhr.setRequestHeader('Content-type','application/json');
   }
 
   xhr.setRequestHeader('Accept','application/json');

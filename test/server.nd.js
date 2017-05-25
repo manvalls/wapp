@@ -123,6 +123,17 @@ app.take('/echo',function(e){
   e.answer(e.data);
 });
 
+app.listen('/echoFile',function*(e){
+  var content = yield e.data.file.getStream();
+
+  e.answer({
+    name: e.data.file.name,
+    type: e.data.file.type,
+    content: content.toString()
+  });
+
+});
+
 app.take('/e500',function(e){
   var obj = {};
   obj.self = obj;

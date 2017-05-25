@@ -4,6 +4,11 @@ var Hsm = require('hsm'),
     PathEvent = require('path-event'),
     walk = require('y-walk'),
     UrlRewriter = require('url-rewriter'),
+    Resolver = require('y-resolver'),
+    Busboy = require('busboy'),
+    tmp = require('tmp'),
+    fs = require('fs'),
+    Cb = require('y-callback'),
 
     pth = require('path'),
 
@@ -14,6 +19,11 @@ var Hsm = require('hsm'),
     detacher = Symbol(),
     emitter = Symbol(),
     data = Symbol(),
+
+    name = Symbol(),
+    encoding = Symbol(),
+    type = Symbol(),
+    fd = Symbol(),
 
     path = Symbol(),
     url = Symbol(),
@@ -87,7 +97,7 @@ class Wapp extends UrlRewriter{
       this,
       headers,
       opt.cors,
-      opt.maxBodySize,
+      opt.limits,
       true
     ) );
 
@@ -105,7 +115,7 @@ class Wapp extends UrlRewriter{
 
 // - utils
 
-function* onReq(he, d, cy, gzipLevel, prefix, w, headers, cors, maxBodySize, isPost){
+function* onReq(he, d, cy, gzipLevel, prefix, w, headers, cors, limits, isPost){
   var pathname = '/' + he.args,
       path,ev,eCode,conf,m,payload;
 
@@ -149,11 +159,16 @@ function* onReq(he, d, cy, gzipLevel, prefix, w, headers, cors, maxBodySize, isP
 
   if(isPost){
     try{
-      if(he.request.headers['content-type'] != 'application/json') throw new Error();
-      if(maxBodySize) he.request.maxSize = maxBodySize;
-      payload = yield he.request;
-      payload += '';
-      payload = JSON.parse(payload);
+
+      if(he.request.headers['content-type'] == 'application/json'){
+        if(limits && limits.JSONSize) he.request.maxSize = limits.JSONSize;
+        payload = yield he.request;
+        payload += '';
+        payload = JSON.parse(payload);
+      }else{
+        payload = yield walk(getPayload, [he, limits]);
+      }
+
     }catch(er){
       eCode = getCode(er);
       path = 'e/' + eCode;
@@ -166,11 +181,99 @@ function* onReq(he, d, cy, gzipLevel, prefix, w, headers, cors, maxBodySize, isP
       'Vary': 'Accept'
     });
 
+    he.resolve();
     he.response.end();
 
   }else{
     ev = new Event(path,he,conf,gzipLevel,w[emitter],pathname,prefix,headers,eCode,payload);
+    ev.add(he);
     ev.give();
+  }
+
+}
+
+function* getPayload(he, limits){
+  var config = {headers: he.request.headers},
+      payload = {},
+      files = [],
+      busboy, cb;
+
+  if(limits) config.limits = limits;
+  busboy = new Busboy(config);
+
+  busboy.on('file', function(fieldname, file, filename, encoding, mimetype) {
+    var res = new Resolver();
+
+    files.push(res.yielded);
+
+    tmp.file(function(err, path, fd, cleanupCallback) {
+      var ws;
+
+      if(err){
+        res.reject(err, true);
+        return;
+      }
+
+      he.listen(cleanupCallback);
+      payload[fieldname] = new File(fd, filename, encoding, mimetype);
+
+      ws = fs.createWriteStream('', {
+        fd: fd,
+        autoClose: false,
+        start: 0
+      });
+
+      ws.on('error', err => res.reject(err, true));
+      ws.on('finish', () => res.resolve());
+
+      file.pipe(ws);
+
+    });
+
+  });
+
+  busboy.on('field', function(fieldname, val, fieldnameTruncated, valTruncated) {
+    payload[fieldname] = val;
+  });
+
+  busboy.on('finish', cb = Cb());
+  he.request.pipe(busboy);
+  
+  yield cb;
+  yield files;
+
+  return payload;
+}
+
+// File
+
+class File{
+
+  constructor(fileDescriptor, filename, enc, mimetype){
+    this[name] = filename;
+    this[encoding] = enc;
+    this[type] = mimetype;
+    this[fd] = fileDescriptor;
+  }
+
+  getStream(){
+    return fs.createReadStream('', {
+      fd: this[fd],
+      start: 0,
+      autoClose: false
+    });
+  }
+
+  get name(){
+    return this[name];
+  }
+
+  get encoding(){
+    return this[encoding];
+  }
+
+  get type(){
+    return this[type];
   }
 
 }
@@ -333,7 +436,7 @@ function* use(st){
 }
 
 function isLegacy(he){
-  return /MSIE [0-8]\./.test(he.request.headers.accept);
+  return /MSIE|Edge/.test(he.request.headers.accept);
 }
 
 function getCode(e){
@@ -346,6 +449,8 @@ function getCode(e){
   }
 
 }
+
+tmp.setGracefulCleanup();
 
 /*/ exports /*/
 

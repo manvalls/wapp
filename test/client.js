@@ -281,11 +281,29 @@ app.take('/',function*(e){
   });
 
   yield t('app.post()',function*(){
-    var e;
+    var e,fd;
 
     app.post('test', '/echo');
     e = yield app.until('/echo');
     assert.strictEqual(e.data, 'test');
+
+    fd = new FormData();
+    fd.append('foo', 'bar');
+    app.post(fd, '/echo');
+    e = yield app.until('/echo');
+    assert.deepEqual(e.data, {foo: 'bar'});
+
+    fd = new FormData();
+    fd.append('file', new Blob(['foobar'], {type: 'text/plain'}), 'foobar.txt');
+    app.post(fd, '/echoFile');
+    e = yield app.until('/echoFile');
+
+    assert.deepEqual(e.data, {
+      name: 'foobar.txt',
+      type: 'text/plain',
+      content: 'foobar'
+    });
+
   });
 
 });
