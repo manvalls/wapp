@@ -215,7 +215,7 @@ function* getPayload(he, limits){
       }
 
       he.listen(cleanupCallback);
-      payload[fieldname] = new File(fd, filename, encoding, mimetype);
+      append(payload, fieldname, new File(fd, filename, encoding, mimetype));
 
       ws = fs.createWriteStream('', {
         fd: fd,
@@ -233,16 +233,21 @@ function* getPayload(he, limits){
   });
 
   busboy.on('field', function(fieldname, val, fieldnameTruncated, valTruncated) {
-    payload[fieldname] = val;
+    append(payload, fieldname, val);
   });
 
   busboy.on('finish', cb = Cb());
   he.request.pipe(busboy);
-  
+
   yield cb;
   yield files;
 
   return payload;
+}
+
+function append(payload, key, value){
+  if(key in payload) payload[key] = [].concat(payload[key], value);
+  else payload[key] = value;
 }
 
 // File

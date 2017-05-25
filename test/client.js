@@ -289,9 +289,11 @@ app.take('/',function*(e){
 
     fd = new FormData();
     fd.append('foo', 'bar');
+    fd.append('bar', 'baz');
+    fd.append('bar', 'buzz');
     app.post(fd, '/echo');
     e = yield app.until('/echo');
-    assert.deepEqual(e.data, {foo: 'bar'});
+    assert.deepEqual(e.data, {foo: 'bar', bar: ['baz', 'buzz']});
 
     fd = new FormData();
     fd.append('file', new Blob(['foobar'], {type: 'text/plain'}), 'foobar.txt');
