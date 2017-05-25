@@ -5,6 +5,7 @@ var PathEvent = require('path-event'),
     pct = require('pct'),
     UrlRewriter = require('url-rewriter'),
     Setter = require('y-setter'),
+    {Getter} = Setter,
 
     query = require('hsm/main/Event/query'),
     cookies = require('hsm/main/Event/cookies'),
@@ -156,18 +157,26 @@ class Wapp extends UrlRewriter{
   }
 
   asset(url){
+    if(Getter.is(url)) return url.map(url => this.asset(url));
     if(url.charAt(0) != '/') url = getPathname(document.baseURI).replace(/[^\/]*$/,'') + url;
     url = app.format(url);
     return encodeURI(location.origin + prefix + '/.assets' + url);
   }
 
   build(url){
+    if(Getter.is(url)) return url.map(url => this.build(url));
     if(url.charAt(0) != '/') url = getPathname(document.baseURI).replace(/[^\/]*$/,'') + url;
     url = app.format(url);
     return encodeURI(location.origin + prefix + '/.build' + url);
   }
 
   href(url,query,fragment){
+
+    if(Getter.is(url) || Getter.is(query) || Getter.is(fragment)){
+      return Getter.map([url,query,fragment], (url,query,fragment) => this.href(url,query,fragment));
+    }
+
+    if(arguments.length == 1 && Getter.is(url)) return url.map(url => this.href(url));
 
     if(url.charAt(0) != '/'){
       let base = getPathname(document.baseURI).replace(/[^\/]*$/,'');
@@ -201,19 +210,88 @@ class Wapp extends UrlRewriter{
     };
   }
 
+  get linkModifier(){
+    return (obj) => {
+      if(obj.src) obj.src = this.href(obj.src);
+      if(obj.href) obj.href = this.href(obj.href);
+    };
+  }
+
+  get formModifier(){
+    let transformAction = action => this.href((action || location.href).toString().replace(/(\?|#).*/, ''));
+
+    return (obj) => {
+      if(Getter.is(obj.action)) obj.action = obj.action.map(transformAction);
+      else obj.action = transformAction(obj.action);
+    };
+  }
+
   get linkDirective(){
     var self = this;
 
     return function(){
       var {on} = this.std;
 
-      this.node.href = self.href(this.node.href);
-
       this.render( on('click', (event) => {
         event.preventDefault();
         self.goTo(this.node.href);
       }) );
 
+    };
+  }
+
+  get formDirective(){
+    var self = this;
+
+    return function(){
+      var {on} = this.std;
+
+      this.render( on('submit', (event) => {
+
+        if(!global.FormData || (this.node.target && this.node.target != '_self')) return;
+        event.preventDefault();
+
+        if(this.node.method.toLowerCase() == 'post'){
+          self.post(new FormData(this.node), this.node.action);
+        }else{
+          let query = {};
+
+          for(let i = 0;i < this.node.elements.length;i++){
+            let element = this.node.elements[i];
+
+            if(!element.name) continue;
+
+            if(element.name in query){
+              query[element.name] = [].concat(query[element.name], element.value + '');
+            }else{
+              query[element.name] = element.value + '';
+            }
+
+          }
+
+          self.goTo(this.node.action, query);
+
+        }
+
+      }) );
+
+    };
+  }
+
+  get modifiers(){
+    return {
+      build: this.buildModifier,
+      asset: this.assetModifier,
+      script: this.scriptModifier,
+      internalLink: this.linkModifier,
+      internalForm: this.formModifier
+    };
+  }
+
+  get directives(){
+    return {
+      internalLink: this.linkDirective,
+      internalForm: this.formDirective
     };
   }
 
