@@ -556,8 +556,11 @@ function handle(url,query,fragment,replace,payload){
     qh = '';
 
     for(i in query) if(query.hasOwnProperty(i)){
+      let values;
+
       if(i.charAt(0) != '_') continue;
-      qh += (qh ? '&' : '') + pct.encodeComponent(i) + '=' + pct.encodeComponent(query[i]);
+      values = [].concat(query[i]);
+      for(let value of values) qh += (qh ? '&' : '') + pct.encodeComponent(i) + '=' + pct.encodeComponent(value);
     }
 
   }
