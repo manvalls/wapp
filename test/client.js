@@ -133,6 +133,17 @@ app.take('/',function*(e){
     app.goTo('/redirect');
     e = yield app.until('/static');
     assert.strictEqual(e.data,'hi');
+
+    let error;
+
+    try{
+      yield app.ajax.get('/static404');
+    }catch(e){
+      error = e;
+    }
+
+    assert.strictEqual(error.code, 404);
+
   });
 
   yield t('Query',function*(){
@@ -305,6 +316,8 @@ app.take('/',function*(e){
       type: 'text/plain',
       content: 'foobar'
     });
+
+    assert.strictEqual('test', (yield app.ajax.post('test', '/echo')));
 
   });
 

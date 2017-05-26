@@ -36,6 +36,8 @@ var PathEvent = require('path-event'),
     modifiers = Symbol(),
     directives = Symbol(),
 
+    ajax = Symbol(),
+
     prefix = global['AR9CVdhVmrgQhE8'],
     state = global['vsx2uwNm7hmbshB'],
     reload = global['uh1UgnboEnnYzpV'],
@@ -290,6 +292,23 @@ class Wapp extends UrlRewriter{
     };
   }
 
+  get ajax(){
+    let request, listener;
+
+    if(this[ajax]) return this[ajax];
+
+    request = (payload, url, query, fragment) => {
+      let res = new Resolver();
+      buildXHR(url,query,fragment,false,payload,ajaxListener,res);
+      return res.yielded;
+    };
+
+    return this[ajax] = {
+      get: (...args) => request(null, ...args),
+      post: (...args) => request(...args)
+    };
+  }
+
   get modifiers(){
     return this[modifiers] = this[modifiers] || {
       build: this.buildModifier,
@@ -536,6 +555,10 @@ function onPopState(e){
 }
 
 function handle(url,query,fragment,replace,payload){
+  buildXHR(url,query,fragment,replace,payload,listener);
+}
+
+function buildXHR(url,query,fragment,replace,payload,listener,res){
   var i,qh,old,isFormData;
 
   if(payload !== undefined){
@@ -565,6 +588,7 @@ function handle(url,query,fragment,replace,payload){
 
   xhr.wapp_fromURL = url;
   xhr.wapp_replaceState = replace;
+  xhr.wapp_res = res;
 
   xhr.onreadystatechange = listener;
 
@@ -578,6 +602,28 @@ function handle(url,query,fragment,replace,payload){
   if(qh) xhr.setRequestHeader('Query',qh);
   if(payload === undefined) xhr.send();
   else xhr.send(payload);
+}
+
+function ajaxListener(){
+  var res = this.wapp_res,
+      data;
+
+  if(this.readyState == 4) try{
+    data = JSON.parse(this.responseText);
+
+    if(Math.floor(this.status / 100) != 2){
+      let error = new Error(this.statusText);
+      error.code = this.status;
+      error.data = data;
+      res.reject(error);
+    }else{
+      res.resolve(data);
+    }
+
+  }catch(err){
+    res.reject(err);
+  }
+
 }
 
 function listener(){
