@@ -25,6 +25,17 @@ var PathEvent = require('path-event'),
     langMap = Symbol(),
     changeYd = Symbol(),
 
+    assetModifier = Symbol(),
+    scriptModifier = Symbol(),
+    buildModifier = Symbol(),
+    linkModifier = Symbol(),
+    formModifier = Symbol(),
+
+    linkDirective = Symbol(),
+    formDirective = Symbol(),
+    modifiers = Symbol(),
+    directives = Symbol(),
+
     prefix = global['AR9CVdhVmrgQhE8'],
     state = global['vsx2uwNm7hmbshB'],
     reload = global['uh1UgnboEnnYzpV'],
@@ -190,37 +201,40 @@ class Wapp extends UrlRewriter{
   }
 
   get assetModifier(){
-    return (obj) => {
+    return this[assetModifier] = this[assetModifier] || ((obj) => {
       if(obj.src) obj.src = this.asset(obj.src);
       if(obj.href) obj.href = this.asset(obj.href);
-    };
+    });
   }
 
   get scriptModifier(){
-    return (obj) => {
+    return this[scriptModifier] = this[scriptModifier] || ((obj) => {
       if(obj.src) obj.src = this.script(obj.src);
       if(obj.href) obj.href = this.script(obj.href);
-    };
+    });
   }
 
   get buildModifier(){
-    return (obj) => {
+    return this[buildModifier] = this[buildModifier] || ((obj) => {
       if(obj.src) obj.src = this.build(obj.src);
       if(obj.href) obj.href = this.build(obj.href);
-    };
+    });
   }
 
   get linkModifier(){
-    return (obj) => {
+    return this[linkModifier] = this[linkModifier] || ((obj) => {
       if(obj.src) obj.src = this.href(obj.src);
       if(obj.href) obj.href = this.href(obj.href);
-    };
+    });
   }
 
   get formModifier(){
-    let transformAction = action => this.href((action || location.href).toString().replace(/(\?|#).*/, ''));
+    let transformAction;
 
-    return (obj) => {
+    if(this[formModifier]) return this[formModifier];
+    transformAction = action => this.href((action || location.href).toString().replace(/(\?|#).*/, ''));
+
+    return this[formModifier] = (obj) => {
       if(Getter.is(obj.action)) obj.action = obj.action.map(transformAction);
       else obj.action = transformAction(obj.action);
     };
@@ -229,7 +243,7 @@ class Wapp extends UrlRewriter{
   get linkDirective(){
     var self = this;
 
-    return function(){
+    return this[linkDirective] = this[linkDirective] || function(){
       var {on} = this.std;
 
       this.render( on('click', (event) => {
@@ -243,7 +257,7 @@ class Wapp extends UrlRewriter{
   get formDirective(){
     var self = this;
 
-    return function(){
+    return this[formDirective] = this[formDirective] || function(){
       var {on} = this.std;
 
       this.render( on('submit', (event) => {
@@ -279,7 +293,7 @@ class Wapp extends UrlRewriter{
   }
 
   get modifiers(){
-    return {
+    return this[modifiers] = this[modifiers] || {
       build: this.buildModifier,
       asset: this.assetModifier,
       script: this.scriptModifier,
@@ -289,7 +303,7 @@ class Wapp extends UrlRewriter{
   }
 
   get directives(){
-    return {
+    return this[directives] = this[directives] || {
       internalLink: this.linkDirective,
       internalForm: this.formDirective
     };
