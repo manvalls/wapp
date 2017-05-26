@@ -187,8 +187,6 @@ class Wapp extends UrlRewriter{
       return Getter.map([url,query,fragment], (url,query,fragment) => this.href(url,query,fragment));
     }
 
-    if(arguments.length == 1 && Getter.is(url)) return url.map(url => this.href(url));
-
     if(url.charAt(0) != '/'){
       let base = getPathname(document.baseURI).replace(/[^\/]*$/,'');
       url = url.split(location.origin + prefix + base).join('');
