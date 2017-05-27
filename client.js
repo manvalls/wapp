@@ -185,8 +185,8 @@ class Wapp extends UrlRewriter{
 
   href(url,query,fragment){
 
-    if(Getter.is(url) || Getter.is(query) || Getter.is(fragment)){
-      return Getter.map([url,query,fragment], (url,query,fragment) => this.href(url,query,fragment));
+    if(Getter.is(url) || Getter.inside(query) || Getter.is(fragment)){
+      return Getter.map([url,Getter.normalize(query),fragment], (url,query,fragment) => this.href(url,query,fragment));
     }
 
     if(url.charAt(0) != '/'){
