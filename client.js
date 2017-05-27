@@ -223,8 +223,8 @@ class Wapp extends UrlRewriter{
 
   get linkModifier(){
     return this[linkModifier] = this[linkModifier] || ((obj) => {
-      if(obj.src) obj.src = this.href(obj.src);
-      if(obj.href) obj.href = this.href(obj.href);
+      if(obj.src) obj.src = this.href(obj.src, obj.params);
+      if(obj.href) obj.href = this.href(obj.href, obj.params);
     });
   }
 
