@@ -326,6 +326,11 @@ class Wapp extends UrlRewriter{
     };
   }
 
+  plug(nite){
+    Object.assign(nite.modifiers, this.modifiers);
+    Object.assign(nite.directives, this.directives);
+  }
+
   route(route){
     var setter;
 
