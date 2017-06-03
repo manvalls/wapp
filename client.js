@@ -645,6 +645,7 @@ function listener(){
     state = {
       [wappState]: true,
       statusCode: this.status,
+      cookie: document.cookie,
       data: data
     };
 
