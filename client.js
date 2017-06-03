@@ -494,8 +494,9 @@ function onPopState(e){
   if(global.history) state = history.state;
   else state = e.state;
 
-  if(!(state && state[wappState] === true))
+  if(!(state && state[wappState] === true && (!state.cookie || state.cookie == document.cookie))){
     return handle(getPathname() + location.search + location.hash,null,null,true);
+  }
 
   fromPH = false;
   if(state.skip) return;
