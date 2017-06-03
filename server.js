@@ -343,6 +343,8 @@ class Event extends PathEvent{
 
     }
 
+    he.resolve();
+
   }
 
   throw(code){
