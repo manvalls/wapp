@@ -41,7 +41,7 @@ function* build(scripts, plugins, dir, dest, watch, instrument, log, watchifyOpt
     let st;
 
     st = new PassThrough();
-    st.file = path.resolve(dir, 'node_modules', 'wapp_entrypoint', name, 'es5');
+    st.file = path.resolve('node_modules', 'wapp_entrypoint', name);
 
     st.end(`
       global[${ JSON.stringify('tfbn0jc14vb9nha' + name) }] = require(${ JSON.stringify(file) });
@@ -50,7 +50,7 @@ function* build(scripts, plugins, dir, dest, watch, instrument, log, watchifyOpt
     es5.add(st);
 
     st = new PassThrough();
-    st.file = path.resolve(dir, 'node_modules', 'wapp_entrypoint', name, 'es6');
+    st.file = path.resolve('node_modules', 'wapp_entrypoint', name);
 
     st.end(`
       global[${ JSON.stringify('tfbn0jc14vb9nha' + name) }] = require(${ JSON.stringify(file) });
@@ -177,7 +177,7 @@ function* build(scripts, plugins, dir, dest, watch, instrument, log, watchifyOpt
         shimmed.addFile(file);
       }
 
-      shimmed.addFileSource(file + '.common', (yield common) + '');
+      shimmed.addFileSource(path.resolve('/.scripts', 'node_modules', 'wapp_common', name), (yield common) + '');
       shimmed.addFileSource(file, data);
       unshimmed.addFileSource(file, data);
 
