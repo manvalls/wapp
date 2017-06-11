@@ -4,8 +4,7 @@ var wrap = require('y-walk').wrap,
 
     cache = require('./utils/cache.js'),
     getConf = require('./utils/getConf.js'),
-    getBr = require('./utils/getBr.js'),
-    packBundles = require('./utils/packBundles.js'),
+    buildScripts = require('./utils/buildScripts.js'),
     removeDeleted = require('./utils/removeDeleted.js'),
 
     build;
@@ -15,12 +14,7 @@ build = wrap(function*(dir,log){
       brs,c,i;
 
   yield cache(dir,log);
-
-  for(i in conf.scripts) if(conf.scripts.hasOwnProperty(i)){
-    brs = getBr(conf.scripts[i],i,false,conf.instrument,conf.plugins,dir);
-    yield packBundles(i,path.resolve(conf.build,'scripts'),brs[0],brs[1],log);
-  }
-
+  yield buildScripts(conf.scripts, conf.plugins, dir, path.resolve(conf.build,'scripts'), false, conf.instrument, log);
   yield removeDeleted(dir);
 
 });

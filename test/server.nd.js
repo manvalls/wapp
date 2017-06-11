@@ -18,7 +18,7 @@ server.once('listening',function(){
     fs.writeFileSync(__dirname + '/static/dir/404.json','404');
   }catch(e){ }
 
-  watcher = watch(__dirname,true);
+  watcher = watch(__dirname,true,{ignoreWatch: true});
   build(__dirname,true).listen(() => {
     try{
       fs.unlinkSync(__dirname + '/static/dir/404.json');

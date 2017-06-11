@@ -1,128 +1,72 @@
 var wrap = require('y-walk').wrap,
     chokidar = require('chokidar'),
     Detacher = require('detacher'),
-    Cb = require('y-callback/node'),
-
+    Cb = require('y-callback'),
     path = require('path'),
-    fs = require('fs'),
+    assert = require('assert'),
+    wait = require('y-timers/wait'),
 
     cache = require('./utils/cache.js'),
     getConf = require('./utils/getConf.js'),
-    getBr = require('./utils/getBr.js'),
-    packBundles = require('./utils/packBundles.js'),
+    buildScripts = require('./utils/buildScripts.js'),
     removeDeleted = require('./utils/removeDeleted.js'),
 
-    watch,onPkg;
+    watch;
 
-function getSw(staticDir,dir,log){
-  var sw = chokidar.watch(staticDir);
+watch = wrap(function*(dir, log, watchifyOptions, d){
+  var conf = yield getConf(dir),
+      staticWatcher = chokidar.watch(conf.static),
+      confWatcher = chokidar.watch( path.resolve(dir,'app.json') ),
+      build = buildScripts(conf.scripts, conf.plugins, dir, path.resolve(conf.build,'scripts'), true, conf.instrument, log, watchifyOptions);
 
-  sw.on('all',onStatic);
-  sw.dir = dir;
-  sw.log = log;
+  while(true){
+    let cb = Cb(),
+        newConf, op;
 
-  cache(dir,log);
+    yield wait(100);
+    staticWatcher.once('all', cb);
+    confWatcher.once('all', cb);
 
-  return sw;
-}
+    newConf = yield getConf(dir);
 
-function getPw(conf,dir,log){
-  var pw = chokidar.watch(path.resolve(dir,'app.json')),
-      wMap = {},
-      brs,i;
+    try{
+      assert.deepEqual(newConf.scripts, conf.scripts);
+      assert.deepEqual(newConf.plugins, conf.plugins);
+      assert.deepEqual(newConf.build, conf.build);
+      assert.deepEqual(newConf.instrument, conf.instrument);
+    }catch(err){
+      build.detach();
+      build = buildScripts(newConf.scripts, newConf.plugins, dir, path.resolve(newConf.build,'scripts'), true, newConf.instrument, log, watchifyOptions);
+    }
 
-  pw.on('all',onPkg);
+    try{
+      assert.equal(newConf.static, conf.static);
+    }catch(err){
+      staticWatcher.close();
+      staticWatcher = chokidar.watch(newConf.static);
+    }
 
-  pw.prevConf = conf;
-  pw.dir = dir;
-  pw.sw = getSw(conf.static,dir,log);
+    conf = newConf;
 
-  for(i in conf.scripts) if(conf.scripts.hasOwnProperty(i)){
-    wMap[i] = getW(conf.scripts[i],i,path.resolve(conf.build,'scripts'),log,conf.instrument,conf.plugins,dir);
-  }
+    yield cache(dir, log);
+    yield removeDeleted(dir);
+    op = yield {cb, d};
 
-  pw.wMap = wMap;
-
-  return pw;
-}
-
-function getW(file,name,folder,log,instrument,plugins,dir){
-  var brs = getBr(file,name,true,instrument,plugins,dir);
-
-  brs[0].name = name;
-  brs[0].folder = folder;
-  brs[0].log = log;
-  brs[0].other = brs[1];
-
-  brs[0].on('update',onUpdate);
-
-  packBundles(name,folder,brs[0],brs[1],log);
-  return brs;
-}
-
-function closePw(pw){
-  var i;
-
-  pw.sw.close();
-
-  for(i in pw.wMap) if(pw.wMap.hasOwnProperty(i)){
-    pw.wMap[i][0].close();
-    pw.wMap[i][1].close();
-  }
-
-  pw.close();
-}
-
-function onUpdate(){
-  packBundles(this.name,this.folder,this,this.other,this.log);
-}
-
-watch = wrap(function*(dir,log,detacher){
-  var conf = yield getConf(dir);
-  detacher.listen(closePw,[getPw(conf,dir,log)]);
-});
-
-onPkg = wrap(function*(){
-  var conf = yield getConf(this.dir),
-      keys = new Set(Object.keys(conf.scripts).concat(Object.keys(this.prevConf.scripts))),
-      i,cb;
-
-  if(conf.static != this.prevConf.static){
-    this.sw.close();
-    this.sw = getSw(conf.static,this.dir,this.log);
-  }
-
-  for(i of keys){
-
-    if(conf.scripts[i] != this.prevConf.scripts[i]){
-
-      if(this.wMap[i]){
-        this.wMap[i][0].close();
-        this.wMap[i][1].close();
-        delete this.wMap[i];
-      }
-
-      if(conf.scripts[i])
-        this.wMap[i] = getW(conf.scripts[i],i,path.resolve(conf.build,'scripts'),this.log,conf.instrument,conf.plugins,this.dir);
-
+    if('d' in op){
+      staticWatcher.close();
+      confWatcher.close();
+      build.detach();
+      return;
     }
 
   }
 
-  this.prevConf = conf;
-  removeDeleted(this.dir);
-
 });
-
-function onStatic(){
-  cache(this.dir,this.log);
-  removeDeleted(this.dir);
-}
 
 /*/ exports /*/
 
-module.exports = function(dir,log){
+module.exports = function(dir,log,watchifyOptions){
   var det = new Detacher();
-  watch(dir,log,det);
+  watch(dir,log,watchifyOptions,det);
   return det;
 };

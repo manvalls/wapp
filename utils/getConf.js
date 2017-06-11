@@ -19,9 +19,7 @@ parseDirs = wrap(function*(dir,opt){
 
     i = keys[j];
     p = resolve.sync(opt.scripts[i], {basedir: dir});
-
-    delete opt.scripts[i];
-    opt.scripts[i.toLowerCase().replace(/\W/g,'')] = p;
+    opt.scripts[i] = p;
 
   }
 

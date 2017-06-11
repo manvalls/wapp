@@ -117,17 +117,14 @@ class Wapp extends UrlRewriter{
   script(script,unshimmed){
     var base;
 
-    script = (script || '').toLowerCase().replace(/\W/g,'');
     base = location.origin + prefix + '/.scripts/' + script;
-
     if(global.YAa22vgIChMzhxs == 'ES5') return encodeURI(base + (unshimmed ? '.us' : '') + '.es5.js');
-    return encodeURI(base + '.js');
+    return encodeURI(base + (unshimmed ? '.us' : '') + '.js');
   }
 
   load(script){
     var tag,res,scr,inDoc;
 
-    script = (script || '').toLowerCase().replace(/\W/g,'');
     tag = 'tfbn0jc14vb9nha' + script;
     res = 'yz37oGsoX9nGtIt' + script;
 

@@ -21,7 +21,7 @@ function complete(n){
 }
 
 cacheFolder = wrap(function*(folder,from,to,log){
-  var cb,files,file,relative,destination,stats,i,d,data,binary;
+  var cb,files,file,relative,destination,stats,i,data,binary;
 
   fs.readdir(folder,cb = new Cb());
   files = yield cb;
@@ -43,12 +43,11 @@ cacheFolder = wrap(function*(folder,from,to,log){
     )){
 
       if(log){
-        d = new Date();
+        let d = new Date();
         process.stdout.write(
-          complete(d.getHours()) +
-          ':' +
-          complete(d.getMinutes()) +
-          ' - Preparing \u001b[3m' + relative + '\u001b[0m... ');
+          complete(d.getHours()) + ':' + complete(d.getMinutes()) + ':' + complete(d.getSeconds()) +
+          ' - Preparing \u001b[3m' + relative + '\u001b[0m... '
+        );
       }
 
       try{

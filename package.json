@@ -34,6 +34,8 @@
     "busboy": "^0.2.14",
     "chokidar": "^1.7.0",
     "detacher": "^2.0.10",
+    "factor-bundle": "^2.5.0",
+    "fast-sourcemap-concat": "^1.1.0",
     "nijm": "^1.4.1",
     "path-event": "^8.1.0",
     "pct": "^1.1.1",
@@ -47,6 +49,7 @@
     "y-lock": "^4.0.0",
     "y-resolver": "^10.1.6",
     "y-setter": "^7.10.0",
+    "y-timers": "^1.1.10",
     "y-walk": "^10.0.9"
   },
   "repository": {
