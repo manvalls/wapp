@@ -1,5 +1,6 @@
 var Cb = require('y-callback/node'),
     wrap = require('y-walk').wrap,
+    pct = require('pct'),
 
     prepareDir = require('./prepareDir.js'),
 
@@ -19,7 +20,8 @@ parseDirs = wrap(function*(dir,opt){
 
     i = keys[j];
     p = resolve.sync(opt.scripts[i], {basedir: dir});
-    opt.scripts[i] = p;
+    delete opt.scripts[i];
+    opt.scripts[pct.encodeComponent(i)] = p;
 
   }
 

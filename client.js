@@ -117,7 +117,7 @@ class Wapp extends UrlRewriter{
   script(script,unshimmed){
     var base;
 
-    base = location.origin + prefix + '/.scripts/' + script;
+    base = location.origin + prefix + '/.scripts/' + pct.encodeComponent(script);
     if(global.YAa22vgIChMzhxs == 'ES5') return encodeURI(base + (unshimmed ? '.us' : '') + '.es5.js');
     return encodeURI(base + (unshimmed ? '.us' : '') + '.js');
   }
@@ -125,6 +125,7 @@ class Wapp extends UrlRewriter{
   load(script){
     var tag,res,scr,inDoc;
 
+    script = pct.encodeComponent(script);
     tag = 'tfbn0jc14vb9nha' + script;
     res = 'yz37oGsoX9nGtIt' + script;
 

@@ -7,9 +7,9 @@ var Hsm = require('hsm'),
     Resolver = require('y-resolver'),
     Busboy = require('busboy'),
     tmp = require('tmp'),
+    pct = require('pct'),
     fs = require('fs'),
     Cb = require('y-callback'),
-
     pth = require('path'),
 
     getConf = require('./utils/getConf.js'),
@@ -137,7 +137,7 @@ function* onReq(he, d, cy, gzipLevel, prefix, w, headers, cors, limits, isPost){
         }
 
         case 'scripts': {
-          return yield he.sendFile(pth.resolve(conf.build,'scripts',m[2]),{
+          return yield he.sendFile(pth.resolve(conf.build,'scripts',pct.encodeComponent(m[2])),{
             headers: {
               'Service-Worker-Allowed': prefix + '/'
             }
