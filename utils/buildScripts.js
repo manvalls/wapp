@@ -242,14 +242,10 @@ function* build(scripts, plugins, dir, dest, watch, instrument, log, watchifyOpt
 
     if(log){
       let d = new Date();
-      let scriptNames = Object.keys(scripts).map(name => `\u001b[3m${name}\u001b[0m`);
-
-      if(scriptNames.length > 1) scriptNames = scriptNames.slice(0, -1).join(', ') + ' and ' + scriptNames.slice(-1).join('');
-      else scriptNames = scriptNames[0];
 
       process.stdout.write(
         complete(d.getHours()) + ':' + complete(d.getMinutes()) + ':' + complete(d.getSeconds()) +
-        ' - Building ' + scriptNames + '... '
+        ' - Building scripts... '
       );
 
     }
@@ -261,7 +257,20 @@ function* build(scripts, plugins, dir, dest, watch, instrument, log, watchifyOpt
         walk(bundle, [es5, es5Res])
       ];
 
-      if(log) console.log('\u001b[32m✓\u001b[0m');
+      if(log){
+        let scriptNames = Object.keys(scripts);
+        let scriptsTree = '';
+        let i = 0;
+
+        for(i = 0;i < scriptNames.length - 1;i++){
+          scriptsTree += ' ├ ' + scriptNames[i] + '\n';
+        }
+
+        scriptsTree += ' └ ' + scriptNames[i] + '\n';
+
+        console.log('\u001b[32m✓\u001b[0m');
+        console.log(scriptsTree);
+      }
 
     }catch(e){
 
