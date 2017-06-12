@@ -174,7 +174,8 @@ function* build(scripts, plugins, dir, dest, watch, instrument, log, watchifyOpt
       }
 
       for(let file of files){
-        shimmed.addFile(file);
+        let source = fs.readFileSync(file, 'utf8');
+        shimmed.addFileSource(file, source);
       }
 
       shimmed.addFileSource(path.resolve('/.scripts', 'node_modules', 'wapp_common', name), (yield common) + '');
