@@ -188,6 +188,17 @@ function* build(scripts, plugins, dir, dest, watch, instrument, log, watchifyOpt
         unshimmed.end()
       ];
 
+      for(let file of generated){
+        let mapFileName = file.replace(/\.js$/, '') + '.map';
+        let map = JSON.parse( fs.readFileSync( mapFileName ) + '' );
+
+        for(let i = 0;i < map.sources.length;i++){
+          map.sources[i] = path.relative(dir, map.sources[i]).replace(/\\/g, '/');
+        }
+
+        fs.writeFileSync(mapFileName, JSON.stringify(map));
+      }
+
       generated = generated.concat( generated.map(file => file.replace(/\.js$/, '') + '.map') );
 
       yield generated.map((file) => {
