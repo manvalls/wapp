@@ -3,6 +3,7 @@ var walk = require('y-walk'),
     Detacher = require('detacher'),
     Cb = require('y-callback'),
     path = require('path'),
+    pct = require('pct'),
     fs = require('fs'),
     zlib = require('zlib'),
     wait = require('y-timers/wait'),
@@ -263,10 +264,10 @@ function* build(scripts, plugins, dir, dest, watch, instrument, log, watchifyOpt
         let i = 0;
 
         for(i = 0;i < scriptNames.length - 1;i++){
-          scriptsTree += ' ├ ' + scriptNames[i] + '\n';
+          scriptsTree += ' ├ ' + pct.decodeComponent(scriptNames[i]) + '\n';
         }
 
-        scriptsTree += ' └ ' + scriptNames[i] + '\n';
+        scriptsTree += ' └ ' + pct.decodeComponent(scriptNames[i]) + '\n';
 
         console.log('\u001b[32m✓\u001b[0m');
         console.log(scriptsTree);
