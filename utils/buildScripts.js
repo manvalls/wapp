@@ -293,7 +293,7 @@ function* build(scripts, plugins, dir, dest, watch, instrument, log, watchifyOpt
         if(e.codeFrame && e.filename){
           console.log(e.filename);
           console.log('\n' + e.codeFrame + '\n');
-        }else process.stdout.write(e.toString().replace(/^\n+|\n+$/g,'') + '\n\n');
+        }else process.stdout.write((e.stack + '').replace(/^\n+|\n+$/g,'') + '\n\n');
 
       }
 
