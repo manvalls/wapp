@@ -264,7 +264,7 @@ class Wapp extends UrlRewriter{
         event.preventDefault();
 
         if(this.node.method.toLowerCase() == 'post'){
-          self.post(new FormData(this.node), this.node.action);
+          self.post(new FormData(this.node), this.node.getAttribute('action'));
         }else{
           let query = {};
 
@@ -281,7 +281,7 @@ class Wapp extends UrlRewriter{
 
           }
 
-          self.goTo(this.node.action, query);
+          self.goTo(this.node.getAttribute('action'), query);
 
         }
 
