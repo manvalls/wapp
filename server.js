@@ -310,6 +310,10 @@ class Event extends PathEvent{
     return this[data];
   }
 
+  get isAJAX(){
+    return this[hsmEvent].request.headers['page-load'] != 'true';
+  }
+
   use(){
     walk(use,arguments,this);
   }

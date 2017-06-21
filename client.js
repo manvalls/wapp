@@ -608,6 +608,8 @@ function buildXHR(url,query,fragment,replace,payload,listener,res){
 
   xhr.setRequestHeader('Accept','application/json');
   if(qh) xhr.setRequestHeader('Query',qh);
+  if(res) xhr.setRequestHeader('Page-load','false');
+  else xhr.setRequestHeader('Page-load','true');
   if(payload === undefined) xhr.send();
   else xhr.send(payload);
 }

@@ -147,3 +147,7 @@ app.take('/*',function(e){
 app.take('e/*',function(e){
   e.answer('NOO');
 });
+
+app.take('/isajax',function(e){
+  e.answer(e.isAJAX);
+});

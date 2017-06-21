@@ -321,6 +321,17 @@ app.take('/',function*(e){
 
   });
 
+  yield t('isAJAX',function*(){
+    var e;
+
+    assert.strictEqual((yield app.ajax.get('/isajax')), true);
+
+    app.get('/isajax');
+    e = yield app.until('/isajax');
+    assert.strictEqual(e.data, false);
+
+  });
+
 });
 
 app.trigger();
