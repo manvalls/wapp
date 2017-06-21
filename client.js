@@ -110,6 +110,10 @@ class Wapp extends UrlRewriter{
     handle(loc,query,fragment,null,payload);
   }
 
+  get(...args){
+    return this.goTo(...args);
+  }
+
   trigger(){
     onPopState({state: lastState});
   }

@@ -83,7 +83,7 @@ app.take('/',function*(e){
   yield t('Static',function*(){
     var e,pe,yd,txt,res;
 
-    app.goTo('/static',{foo: 'bar'},'foo');
+    app.get('/static',{foo: 'bar'},'foo');
     e = yield app.until('/static');
     assert.strictEqual(e.data,'hi');
     assert.strictEqual(e.path,'/static');
