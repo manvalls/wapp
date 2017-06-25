@@ -314,6 +314,10 @@ class Event extends PathEvent{
     return this[hsmEvent].request.headers['page-load'] != 'true';
   }
 
+  get isPartial(){
+    return this[hsmEvent].request.headers.partial == 'true';
+  }
+
   use(){
     walk(use,arguments,this);
   }

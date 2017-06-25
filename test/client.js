@@ -332,6 +332,36 @@ app.take('/',function*(e){
 
   });
 
+  yield t('Partials',function*(){
+    var e;
+
+    app.post({foo: 'bar'},'/echo');
+    e = yield app.until('/echo');
+    assert.deepEqual(e.data, {foo: 'bar'});
+
+    app.reduce((...args) => Object.assign({}, ...args)).get('/ispartial');
+    e = yield app.until('/ispartial');
+    assert.deepEqual(e.data, {foo: 'bar', partial: true});
+
+    app.reduceRight().post({bar: 'foo'},'/echo');
+    e = yield app.until('/ispartial');
+    assert.deepEqual(e.data, {foo: 'bar', bar: 'foo', partial: true});
+
+    app.map().post({map: true},'/echo');
+    e = yield app.until('/echo');
+    assert.deepEqual(e.data, {foo: 'bar', bar: 'foo', partial: true, map: true});
+
+    history.back();
+    e = yield app.until('/ispartial');
+    assert.deepEqual(e.data, {foo: 'bar', bar: 'foo', partial: true});
+
+    app.get({foo: 'bar'});
+    e = yield app.until('/ispartial');
+    assert.deepEqual(e.data, {partial: false});
+    assert.deepEqual(e.query, {foo: 'bar'});
+
+  });
+
 });
 
 app.trigger();

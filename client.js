@@ -37,6 +37,9 @@ var PathEvent = require('path-event'),
     directives = Symbol(),
 
     ajax = Symbol(),
+    mode = Symbol(),
+    fillXHR = Symbol(),
+    callback = Symbol(),
 
     prefix = global['AR9CVdhVmrgQhE8'],
     state = global['vsx2uwNm7hmbshB'],
@@ -49,7 +52,8 @@ var PathEvent = require('path-event'),
     wappState = 'F267zopcHHbUvVC',
     lastState = state || (global.history || {}).state,
     fromPH = false,
-    xhr,app;
+    xhrSet = new Set(),
+    app;
 
 // app
 
@@ -92,22 +96,36 @@ class Wapp extends UrlRewriter{
 
   goTo(loc,query,fragment){
 
+    if(typeof loc != 'string'){
+      fragment = query;
+      query = loc;
+      loc = getPathname() + location.search + location.hash;
+    }
+
     if(typeof query != 'object'){
       fragment = query;
       query = null;
     }
 
-    handle(loc,query,fragment);
+    buildXHR(loc,query,fragment,undefined,undefined,null,false);
+
   }
 
   post(payload,loc,query,fragment){
 
+    if(typeof loc != 'string'){
+      fragment = query;
+      query = loc;
+      loc = getPathname() + location.search + location.hash;
+    }
+
     if(typeof query != 'object'){
       fragment = query;
       query = null;
     }
 
-    handle(loc,query,fragment,null,payload);
+    buildXHR(loc,query,fragment,undefined,payload,null,false);
+
   }
 
   get(...args){
@@ -301,7 +319,7 @@ class Wapp extends UrlRewriter{
 
     request = (payload, url, query, fragment) => {
       let res = new Resolver();
-      buildXHR(url,query,fragment,false,payload,ajaxListener,res);
+      buildXHR(url,query,fragment,false,payload,res);
       return res.yielded;
     };
 
@@ -359,6 +377,75 @@ class Wapp extends UrlRewriter{
   set title(title){
     document.title = title;
     if(global.history) history.replaceState(history.state,document.title,location.href);
+  }
+
+  reduceRight(callback = (...args) => Object.assign({}, ...args)){
+    return new Modifier('right', callback);
+  }
+
+  reduce(callback = (...args) => Object.assign({}, ...args)){
+    return new Modifier('left', callback);
+  }
+
+  map(callback = (...args) => Object.assign({}, ...args)){
+    return new Modifier('map', callback);
+  }
+
+}
+
+class Modifier{
+
+  constructor(m, cb){
+    this[mode] = m;
+    this[callback] = cb;
+  }
+
+  get(...args){
+    return this.goTo(...args);
+  }
+
+  post(payload,loc,query,fragment){
+    var xhr;
+
+    if(typeof loc != 'string'){
+      fragment = query;
+      query = loc;
+      loc = getPathname() + location.search + location.hash;
+    }
+
+    if(typeof query != 'object'){
+      fragment = query;
+      query = null;
+    }
+
+    xhr = buildXHR(loc,query,fragment,this[mode] == 'left' || this[mode] == 'right',payload,null,true);
+    this[fillXHR](xhr);
+
+  }
+
+  goTo(loc,query,fragment){
+    var xhr;
+
+    if(typeof loc != 'string'){
+      fragment = query;
+      query = loc;
+      loc = getPathname() + location.search + location.hash;
+    }
+
+    if(typeof query != 'object'){
+      fragment = query;
+      query = null;
+    }
+
+    xhr = buildXHR(loc,query,fragment,this[mode] == 'left' || this[mode] == 'right',undefined,null,true);
+    this[fillXHR](xhr);
+
+  }
+
+  [fillXHR](xhr){
+    xhr.wapp_callback = this[callback];
+    xhr.wapp_modifier = this;
+    xhr.wapp_modifier_mode = this[mode];
   }
 
 }
@@ -486,10 +573,8 @@ function onPopState(e){
   var fph = fromPH,
       ev,firstDigit,code,sc,task,state;
 
-  if(xhr){
-    xhr.abort();
-    xhr = null;
-  }
+  for(let xhr of xhrSet) xhr.abort();
+  xhrSet.clear();
 
   app[emitter].sun('ready','busy');
 
@@ -497,7 +582,7 @@ function onPopState(e){
   else state = e.state;
 
   if(!(state && state[wappState] === true && (!state.cookie || state.cookie == document.cookie))){
-    return handle(getPathname() + location.search + location.hash,null,null,true);
+    return buildXHR(getPathname() + location.search + location.hash,null,null,true,undefined,null,false);
   }
 
   fromPH = false;
@@ -562,12 +647,8 @@ function onPopState(e){
   sc.accept();
 }
 
-function handle(url,query,fragment,replace,payload){
-  buildXHR(url,query,fragment,replace,payload,listener);
-}
-
-function buildXHR(url,query,fragment,replace,payload,listener,res){
-  var i,qh,old,isFormData;
+function buildXHR(url,query,fragment,replace,payload,res,mod){
+  var i,qh,isFormData,xhr;
 
   if(payload !== undefined){
     if(global.FormData && (payload instanceof FormData)) isFormData = true;
@@ -576,10 +657,16 @@ function buildXHR(url,query,fragment,replace,payload,listener,res){
 
   url = app.href(url,query,fragment);
 
-  app[emitter].sun('busy','ready');
-  old = xhr;
+  if(mod && app.is('busy')) return;
+
+  if(!(res || mod)){
+    app[emitter].sun('busy','ready');
+    for(let xhr of xhrSet) xhr.abort();
+    xhrSet.clear();
+  }
+
   xhr = new XMLHttpRequest();
-  if(old) old.abort();
+  if(!res) xhrSet.add(xhr);
 
   if(query){
     qh = '';
@@ -598,7 +685,8 @@ function buildXHR(url,query,fragment,replace,payload,listener,res){
   xhr.wapp_replaceState = replace;
   xhr.wapp_res = res;
 
-  xhr.onreadystatechange = listener;
+  if(res) xhr.onreadystatechange = ajaxListener;
+  else xhr.onreadystatechange = listener;
 
   if(payload === undefined) xhr.open('GET',url,true);
   else{
@@ -608,10 +696,13 @@ function buildXHR(url,query,fragment,replace,payload,listener,res){
 
   xhr.setRequestHeader('Accept','application/json');
   if(qh) xhr.setRequestHeader('Query',qh);
-  if(res) xhr.setRequestHeader('Page-load','false');
-  else xhr.setRequestHeader('Page-load','true');
+  xhr.setRequestHeader('Page-load',res ? 'false' : 'true');
+  xhr.setRequestHeader('Partial',mod ? 'true' : 'false');
+
   if(payload === undefined) xhr.send();
   else xhr.send(payload);
+
+  return xhr;
 }
 
 function ajaxListener(){
@@ -640,11 +731,13 @@ function listener(){
   var data,state,url,pref,i,m;
 
   if(this.readyState == 4){
-    if(xhr != this) return;
-    xhr = null;
+    if(!xhrSet.has(this)) return;
+    xhrSet.delete(this);
 
     try{ data = JSON.parse(this.responseText); }
     catch(e){ }
+
+    if(this.wapp_callback) data = this.wapp_callback.call(this.wapp_modifier, ((global.history || {}).state || {}).data, data);
 
     state = {
       [wappState]: true,
@@ -666,10 +759,12 @@ function listener(){
       url = this.responseURL.slice(pref.length) + (m ? m[0] : '');
     }else url = this.wapp_fromURL;
 
-    if(this.wapp_replaceState || (history.state && history.state.placeholder))
-      history.replaceState(state,document.title,url);
+    if(this.wapp_modifier_mode == 'right') url = location.href;
+    if(this.wapp_replaceState || (history.state && history.state.placeholder)) history.replaceState(state,document.title,url);
     else history.pushState(state,document.title,url);
+
     onPopState({state: state});
+
   }
 
 }

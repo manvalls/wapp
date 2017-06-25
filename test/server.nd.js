@@ -151,3 +151,7 @@ app.take('e/*',function(e){
 app.take('/isajax',function(e){
   e.answer(e.isAJAX);
 });
+
+app.take('/ispartial',function(e){
+  e.answer({partial: e.isPartial});
+});
